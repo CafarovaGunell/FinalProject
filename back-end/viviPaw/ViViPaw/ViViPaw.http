@@ -1,0 +1,6 @@
+@ViViPaw_HostAddress = http://localhost:5123
+
+GET {{ViViPaw_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,12 @@
+[
+  {
+    "ContainingType": "ViViPaw.Controllers.AnimalsController",
+    "Method": "Get",
+    "RelativePath": "Animals",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  }
+]
