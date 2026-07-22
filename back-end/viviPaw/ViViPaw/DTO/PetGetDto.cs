@@ -1,4 +1,6 @@
-﻿namespace ViViPaw.DTO
+﻿using ViViPaw.Models;
+
+namespace ViViPaw.DTO
 {
     public class PetGetDto
     {
@@ -11,5 +13,7 @@
         public string Location { get; set; }
         public string DateText { get; set; } // Tarixi analiz edib frontend-ə birbaşa "Bugün", "Dünən" və ya "18.07.2026" ötürmək üçün
         public bool IsUrgent { get; set; }
+
+        public string CategoryName { get; set; }
     }
 }

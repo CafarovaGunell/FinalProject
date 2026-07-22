@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Heart, Search, SlidersHorizontal, MapPin, Calendar, Grid, List, Check } from 'lucide-react';
+import { Heart, Search, SlidersHorizontal, MapPin, Calendar, Grid, List, Check, X } from 'lucide-react';
 
 const Adopt = () => {
-  // API-dan gələcək heyvanların siyahısı
+  // API-dan gələcək datalar üçün state-lər
   const [allPets, setAllPets] = useState([]);
+  const [categories, setCategories] = useState([]); // Bazadan dinamik gələcək kateqoriyalar
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Filtrlər üçün state-lər
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedType, setSelectedType] = useState('All');
-  const [selectedCity, setSelectedCity] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('All'); // Kateqoriyaya görə filtr
+  const [citySearchQuery, setCitySearchQuery] = useState('');     // Şəhər üzrə yazaraq axtarış
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   
   // Aktiv görünüş rejimi (Grid və ya List)
@@ -20,11 +21,24 @@ const Adopt = () => {
   // Sevimlilər siyahısı (Wishlist)
   const [wishlist, setWishlist] = useState([]);
 
-  // API-dan dataların çəkilməsi
+  // API-dan dataların və kateqoriyaların parallel çəkilməsi
   useEffect(() => {
-    axios.get('http://localhost:5123/Animals')
-      .then(response => {
-        setAllPets(response.data);
+    const fetchPets = axios.get('http://localhost:5123/api/Animals');
+    // Əgər Kateqoriyalar üçün xüsusi controlleriniz varsa (məsələn: CategoriesController), oradan da dinamik çəkə bilərsiniz:
+    const fetchCategories = axios.get('http://localhost:5123/api/Categories').catch(() => null);
+
+    Promise.all([fetchPets, fetchCategories])
+      .then(([petsRes, categoriesRes]) => {
+        setAllPets(petsRes.data);
+
+        // Əgər Categories controlleriniz varsa dinamik gəlsin, yoxdursa bazadakı siyahıya əsasən fallback set edirik
+        if (categoriesRes && categoriesRes.data) {
+          setCategories(categoriesRes.data.map(c => c.name));
+        } else {
+          // SQL bazasındakı dəqiq adlar:
+          setCategories(['İt', 'Pişik', 'Quş', 'Akvarium', 'Gəmirici', 'Digər']);
+        }
+
         setLoading(false);
       })
       .catch(err => {
@@ -43,18 +57,24 @@ const Adopt = () => {
     }
   };
 
-  // Filtrləmə məntiqi (API-dan gələn model adlarına uyğunlaşdırıldı)
+  // TAM DƏQİQ FİLTRLƏMƏ MƏNTİQİ
   const filteredPets = allPets.filter(pet => {
-    const nameMatch = pet.name ? pet.name.toLowerCase().includes(searchQuery.toLowerCase()) : false;
-    const breedMatch = pet.breed ? pet.breed.toLowerCase().includes(searchQuery.toLowerCase()) : false;
-    const matchesSearch = nameMatch || breedMatch;
-    
-    // Əgər API-da "type" (İt/Pişik) birbaşa yoxdursa, breed və ya digər property-ə görə yoxlaya bilərsiniz.
-    // Burada modelinizdə "type" sahəsinin olduğunu fərz edirik.
-    const matchesType = selectedType === 'All' || pet.type === selectedType;
-    const matchesCity = selectedCity === 'All' || pet.location === selectedCity;
+    const searchLower = searchQuery.toLowerCase().trim();
+    const cityLower = citySearchQuery.toLowerCase().trim();
 
-    return matchesSearch && matchesType && matchesCity;
+    // 1. Ad və ya cinsə görə axtarış
+    const nameMatch = pet.name ? pet.name.toLowerCase().includes(searchLower) : false;
+    const breedMatch = pet.breed ? pet.breed.toLowerCase().includes(searchLower) : false;
+    const matchesSearch = searchLower === '' || nameMatch || breedMatch;
+    
+    // 2. Şəhərə görə YAZDIQCA axtarış
+    const matchesCity = cityLower === '' || (pet.location && pet.location.toLowerCase().includes(cityLower));
+
+    // 3. KATEQORİYAYA GÖRƏ FİLTR (Backend-dən gələn categoryName ilə)
+    const matchesCategory = selectedCategory === 'All' || 
+      (pet.categoryName && pet.categoryName.toLowerCase() === selectedCategory.toLowerCase());
+
+    return matchesSearch && matchesCity && matchesCategory;
   });
 
   if (loading) {
@@ -95,36 +115,46 @@ const Adopt = () => {
               <span>Süzgəclər</span>
             </div>
 
-            {/* Heyvan Növü */}
+            {/* Bütün Kateqoriyalar Siyahısı */}
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Heyvan Növü</label>
-              <div className="flex flex-col gap-1.5">
-                {['All', 'İt', 'Pişik'].map((type) => (
+              <div className="flex flex-col gap-1.5 max-h-[260px] overflow-y-auto pr-1">
+                {['All', ...categories].map((cat) => (
                   <button
-                    key={type}
-                    onClick={() => setSelectedType(type)}
-                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-colors ${selectedType === type ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-600 hover:bg-slate-50'}`}
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+                      selectedCategory === cat ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-600 hover:bg-slate-50'
+                    }`}
                   >
-                    <span>{type === 'All' ? 'Hamısı' : type}</span>
-                    {selectedType === type && <Check size={16} />}
+                    <span>{cat === 'All' ? 'Hamısı' : cat}</span>
+                    {selectedCategory === cat && <Check size={16} />}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Şəhər Filtri */}
+            {/* YAZDIQCA AXTARAN ŞƏHƏR FİLTRİ */}
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Şəhər</label>
-              <select 
-                value={selectedCity} 
-                onChange={(e) => setSelectedCity(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-blue-500 text-slate-700"
-              >
-                <option value="All">Bütün Şəhərlər</option>
-                <option value="Bakı">Bakı</option>
-                <option value="Gəncə">Gəncə</option>
-                <option value="Sumqayıt">Sumqayıt</option>
-              </select>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Şəhər Axtar</label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input 
+                  type="text"
+                  placeholder="Bakı, Gəncə..." 
+                  value={citySearchQuery} 
+                  onChange={(e) => setCitySearchQuery(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-sm font-medium focus:outline-none focus:border-blue-500 text-slate-700"
+                />
+                {citySearchQuery && (
+                  <button 
+                    onClick={() => setCitySearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
             </div>
           </aside>
 
@@ -144,7 +174,7 @@ const Adopt = () => {
                 />
               </div>
 
-              {/* Mobil Üçün Düymələr */}
+              {/* Mobil Düymələr Və View Mode */}
               <div className="flex w-full sm:w-auto gap-2 justify-end items-center">
                 <button 
                   onClick={() => setShowMobileFilters(!showMobileFilters)}
@@ -172,24 +202,32 @@ const Adopt = () => {
             </div>
 
             {/* MOBİL FİLTR PANELİ */}
-            <div className={`lg:hidden bg-white p-5 rounded-2xl border border-slate-200 shadow-inner space-y-4 overflow-hidden transition-all duration-300 ${showMobileFilters ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none p-0 border-none'}`}>
+            <div className={`lg:hidden bg-white p-5 rounded-2xl border border-slate-200 shadow-inner space-y-4 overflow-hidden transition-all duration-300 ${
+              showMobileFilters ? 'max-h-[350px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none p-0 border-none'
+            }`}>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-400 uppercase">Növ</label>
-                  <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium">
+                  <select 
+                    value={selectedCategory} 
+                    onChange={(e) => setSelectedCategory(e.target.value)} 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium"
+                  >
                     <option value="All">Hamısı</option>
-                    <option value="İt">İt</option>
-                    <option value="Pişik">Pişik</option>
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-400 uppercase">Şəhər</label>
-                  <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium">
-                    <option value="All">Hamısı</option>
-                    <option value="Bakı">Bakı</option>
-                    <option value="Gəncə">Gəncə</option>
-                    <option value="Sumqayıt">Sumqayıt</option>
-                  </select>
+                  <label className="text-xs font-bold text-slate-400 uppercase">Şəhər Axtar</label>
+                  <input 
+                    type="text" 
+                    placeholder="Şəhər yazın..."
+                    value={citySearchQuery} 
+                    onChange={(e) => setCitySearchQuery(e.target.value)} 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium"
+                  />
                 </div>
               </div>
             </div>
@@ -212,11 +250,11 @@ const Adopt = () => {
                         viewMode === 'list' ? 'w-full sm:w-[260px] h-[180px] sm:h-full' : 'aspect-[4/3]'
                       }`}>
                         <img 
-                          src={pet.imageUrl || pet.image} 
+                          src={pet.imageUrl || '/placeholder.jpg'} 
                           alt={pet.name} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        {/* Əgər backenddən isUrgent gəlirsə Təcili, gəlmirsə standart etiket yazılır */}
+                        
                         <span className={`absolute top-3 left-3 text-xs font-bold px-2.5 py-1 rounded-lg text-white ${pet.isUrgent ? 'bg-rose-500' : 'bg-blue-600'}`}>
                           {pet.isUrgent ? 'Təcili' : 'Yeni'}
                         </span>
@@ -237,7 +275,7 @@ const Adopt = () => {
                             <p className="text-xs text-slate-400 mt-0.5">{pet.breed} • {pet.gender}</p>
                           </div>
                           <span className="text-xs font-semibold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md border border-blue-100/50">
-                            {pet.ageText || pet.age || (pet.ageInMonths ? `${pet.ageInMonths} aylıq` : '')}
+                            {pet.ageText}
                           </span>
                         </div>
 
@@ -245,11 +283,11 @@ const Adopt = () => {
                         <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-slate-500 text-xs font-medium">
                           <div className="flex items-center gap-1">
                             <MapPin size={14} className="text-slate-400" />
-                            <span>{pet.location || pet.city}</span>
+                            <span>{pet.location}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar size={14} className="text-slate-400" />
-                            <span>{pet.dateText || 'Bugün'}</span>
+                            <span>{pet.dateText}</span>
                           </div>
                         </div>
 

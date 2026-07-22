@@ -1,16 +1,28 @@
+using Microsoft.EntityFrameworkCore;
+using ViViPaw.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+
+builder.Services.AddDbContext<AppDbContext>(opt =>
+{
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default"));
+});
+
+
 builder.Services.AddSwaggerGen();
 
-// --- 1. BURADAN YAZIN (builder.Build()-dən əvvəl) ---
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowReact", policy =>
+    options.AddPolicy("AllowAll", policy =>
     {
         policy.WithOrigins("http://localhost:5173")
+              .AllowAnyOrigin()
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -19,16 +31,15 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// --- 2. BURADAN YAZIN (app.UseAuthorization()-dən əvvəl) ---
-app.UseCors("AllowReact");
-// -----------------------------------------------------------
+app.UseCors("AllowAll");
+
 
 app.UseAuthorization();
 

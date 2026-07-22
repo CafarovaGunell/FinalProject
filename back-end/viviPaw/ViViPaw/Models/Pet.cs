@@ -1,24 +1,27 @@
-﻿namespace ViViPaw.Models
+﻿using ViViPaw.Models.Base;
+
+namespace ViViPaw.Models
 {
-    public class Pet
+    public class Pet : BaseEntity
     {
-        public int Id { get; set; }
 
-        public string Name { get; set; } // "Badi"
+        public string Name { get; set; }
+        public string Breed { get; set; }
+        public string Gender { get; set; }
+        public int AgeInMonths { get; set; }
+        public string ImageUrl { get; set; }
+        public string Location { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public bool IsAdopted { get; set; }
 
-        public string Breed { get; set; } // Cinsi: "Golden Retriever"
+        // PetShopId və CategoryId qalıq qalır (çünki `int`-dir)
+        public int PetShopId { get; set; }
+        public PetShop? PetShop { get; set; } // Nullable (?) edirik
 
-        public string Gender { get; set; } // Cinsi: "Erkək" (və ya enum edə bilərsiniz)
+        public int CategoryId { get; set; }
+        public Category? Category { get; set; } // Nullable (?) edirik
 
-        public int AgeInMonths { get; set; } // Yaşı ay olaraq saxlamaq daha yaxşıdır: "3" (aylıq)
+        // --- WISHLIST ƏLAQƏSİ ---
 
-        public string ImageUrl { get; set; } // İtin şəklinin linki
-
-        public string Location { get; set; } // "Bakı"
-
-        public DateTime CreatedAt { get; set; } = DateTime.Now; // Elanın tarixi: "Bugün" (bunu hesablamaq üçün)
-
-
-        public bool IsAdopted { get; set; } // Sahibləndirilib-sahibləndirilmədiyini yoxlamaq üçün
     }
 }
