@@ -22,6 +22,7 @@ namespace ViViPaw.Models
         public Category? Category { get; set; } // Nullable (?) edirik
 
         // --- WISHLIST ƏLAQƏSİ ---
+        public ICollection<WishList> Wishlists { get; set; } = new List<WishList>();
 
     }
 }

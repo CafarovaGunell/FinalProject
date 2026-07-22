@@ -5,6 +5,8 @@ import Adopt from "../home/pages/adopt";
 import PetCare from "../home/pages/petcare";
 import About from "../home/pages/about";
 import Wishlist from "../home/pages/wishlist";
+import PetDetail from "../home/pages/detail";
+import Auth from "../home/pages/auth";
 
 
 
@@ -22,6 +24,10 @@ export const router=createBrowserRouter([
                 path:"adopt"
             },
             {
+                element: <PetDetail />,
+                path: "adopt/:id" 
+            },
+            {
                 element:<PetCare/>,
                 path:"petcare"
             },
@@ -32,7 +38,12 @@ export const router=createBrowserRouter([
             {
                 element:<Wishlist/>,
                 path:"wishlist"
-            }                
+            },
+            {
+                element: <Auth />,
+                path: "login" 
+            }
+                          
             
         ]
      }

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ViViPaw.Data;
 using ViViPaw.DTO;
@@ -11,10 +12,12 @@ namespace ViViPaw.Controllers
     public class AnimalsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IMapper _mapper;
 
-        public AnimalsController(AppDbContext context)
+        public AnimalsController(AppDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper; 
         }
 
         // GET: api/Animals
@@ -44,6 +47,30 @@ namespace ViViPaw.Controllers
             }).ToList();
 
             return Ok(petCards);
+        }
+
+
+        // GET: api/Animals/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<PetDetailDto>> GetPet(int id)
+        {
+            // 1. Data-nı bazadan Category və PetShop əlaqələri ilə birgə çəkirik
+            var pet = await _context.Pets
+                .Include(p => p.Category)
+                .Include(p => p.PetShop)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            // 2. Əgər tapılmadısa 404 qaytarırıq
+            if (pet == null)
+            {
+                return NotFound(new { message = "Heyvan tapılmadı" });
+            }
+
+            // 3. AutoMapper ilə Entity-ni DTO-ya çeviririk (CƏMİ 1 SƏTİR)
+            var petDetail = _mapper.Map<PetDetailDto>(pet);
+
+            // 4. Məlumatı göndəririk
+            return Ok(petDetail);
         }
     }
 }

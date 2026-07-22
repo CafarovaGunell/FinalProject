@@ -22,6 +22,38 @@ namespace ViViPaw.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("ViViPaw.Models.AppUser", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Users");
+                });
+
             modelBuilder.Entity("ViViPaw.Models.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -148,6 +180,32 @@ namespace ViViPaw.Migrations
                     b.ToTable("PetShops");
                 });
 
+            modelBuilder.Entity("ViViPaw.Models.WishList", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PetId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PetId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("WishLists");
+                });
+
             modelBuilder.Entity("ViViPaw.Models.Pet", b =>
                 {
                     b.HasOne("ViViPaw.Models.Category", "Category")
@@ -167,9 +225,38 @@ namespace ViViPaw.Migrations
                     b.Navigation("PetShop");
                 });
 
+            modelBuilder.Entity("ViViPaw.Models.WishList", b =>
+                {
+                    b.HasOne("ViViPaw.Models.Pet", "Pet")
+                        .WithMany("Wishlists")
+                        .HasForeignKey("PetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ViViPaw.Models.AppUser", "User")
+                        .WithMany("Wishlists")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Pet");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ViViPaw.Models.AppUser", b =>
+                {
+                    b.Navigation("Wishlists");
+                });
+
             modelBuilder.Entity("ViViPaw.Models.Category", b =>
                 {
                     b.Navigation("Pets");
+                });
+
+            modelBuilder.Entity("ViViPaw.Models.Pet", b =>
+                {
+                    b.Navigation("Wishlists");
                 });
 
             modelBuilder.Entity("ViViPaw.Models.PetShop", b =>
