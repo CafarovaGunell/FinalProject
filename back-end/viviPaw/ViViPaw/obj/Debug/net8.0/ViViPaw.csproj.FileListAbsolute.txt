@@ -152,3 +152,9 @@ C:\Users\Gunel Cafarova\Desktop\FinalProject\back-end\viviPaw\ViViPaw\bin\Debug\
 C:\Users\Gunel Cafarova\Desktop\FinalProject\back-end\viviPaw\ViViPaw\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 C:\Users\Gunel Cafarova\Desktop\FinalProject\back-end\viviPaw\ViViPaw\bin\Debug\net8.0\Microsoft.Bcl.Cryptography.dll
 C:\Users\Gunel Cafarova\Desktop\FinalProject\back-end\viviPaw\ViViPaw\bin\Debug\net8.0\System.Formats.Asn1.dll
+C:\Users\Gunel Cafarova\Desktop\FinalProject\back-end\viviPaw\ViViPaw\bin\Debug\net8.0\Microsoft.AspNetCore.Cryptography.Internal.dll
+C:\Users\Gunel Cafarova\Desktop\FinalProject\back-end\viviPaw\ViViPaw\bin\Debug\net8.0\Microsoft.AspNetCore.Cryptography.KeyDerivation.dll
+C:\Users\Gunel Cafarova\Desktop\FinalProject\back-end\viviPaw\ViViPaw\bin\Debug\net8.0\Microsoft.AspNetCore.Identity.EntityFrameworkCore.dll
+C:\Users\Gunel Cafarova\Desktop\FinalProject\back-end\viviPaw\ViViPaw\bin\Debug\net8.0\Microsoft.Extensions.Identity.Core.dll
+C:\Users\Gunel Cafarova\Desktop\FinalProject\back-end\viviPaw\ViViPaw\bin\Debug\net8.0\Microsoft.Extensions.Identity.Stores.dll
+C:\Users\Gunel Cafarova\Desktop\FinalProject\back-end\viviPaw\ViViPaw\bin\Debug\net8.0\ViViPaw.staticwebassets.runtime.json

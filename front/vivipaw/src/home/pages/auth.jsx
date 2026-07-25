@@ -22,7 +22,6 @@ const Auth = () => {
   // Input dəyişikliyi
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    // Dəyər yazıldıqda həmin xananın xətasını silirik
     setFieldErrors((prev) => ({ ...prev, [e.target.name]: '' }));
     setGeneralError('');
   };
@@ -35,7 +34,7 @@ const Auth = () => {
     setFormData({ fullName: '', email: '', password: '' });
   };
 
-  // CLIENT-SIDE PRE-VALIDATION (Sürətli yoxlama)
+  // CLIENT-SIDE PRE-VALIDATION
   const validateForm = () => {
     const errors = {};
 
@@ -72,6 +71,7 @@ const Auth = () => {
       ? 'http://localhost:5123/api/Auth/login' 
       : 'http://localhost:5123/api/Auth/register';
 
+    // Backend-dəki RegisterDto və LoginDto modellərinə tam uyğundur:
     const payload = isLogin 
       ? { email: formData.email, password: formData.password }
       : { fullName: formData.fullName, email: formData.email, password: formData.password };
@@ -87,7 +87,6 @@ const Auth = () => {
         const { status, data } = err.response;
 
         if (status === 400 && data.errors) {
-          // ASP.NET Core Validation Errors [Required], [EmailAddress] və s.
           const backendFieldErrors = {};
           Object.keys(data.errors).forEach((key) => {
             const fieldName = key.charAt(0).toLowerCase() + key.slice(1);
@@ -95,13 +94,12 @@ const Auth = () => {
           });
           setFieldErrors(backendFieldErrors);
         } else if (typeof data === 'string') {
-          // BadRequest("Bu e-poçt...") və ya Unauthorized("E-poçt və ya parol...")
           setGeneralError(data);
         } else {
           setGeneralError('Giriş məlumatları yanlışdır və ya xəta baş verdi.');
         }
       } else {
-        setGeneralError('Serverlə əlaqə saxlanıla bilmədi. Backend-in işlədiyindən emin olun.');
+        setGeneralError('Serverlə əlaqə saxlanıla bilmədi. Backend-in işlədiyindən əmin olun.');
       }
     } finally {
       setLoading(false);
@@ -204,7 +202,7 @@ const Auth = () => {
             </div>
           </div>
 
-          {/* General Server Error (e.g., Email exists / Invalid credentials) */}
+          {/* General Server Error */}
           {generalError && (
             <div className="mb-5 p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl sm:rounded-2xl text-xs font-semibold flex items-center gap-2.5">
               <AlertCircle size={18} className="shrink-0 text-rose-400" />
@@ -263,11 +261,6 @@ const Auth = () => {
                 <label className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">
                   Parol
                 </label>
-                {isLogin && (
-                  <button type="button" className="text-[10px] sm:text-[11px] font-semibold text-sky-400 hover:underline">
-                    Parolu unutmusunuz?
-                  </button>
-                )}
               </div>
               <input 
                 type="password"

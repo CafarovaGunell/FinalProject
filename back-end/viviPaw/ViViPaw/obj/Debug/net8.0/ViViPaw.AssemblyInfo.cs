@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ViViPaw")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fda4557724a7b75254b79cdb99e6b4de0247d07f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b2761614e0ffec7b8ac3f681fb9241cb3fc51c9b")]
 [assembly: System.Reflection.AssemblyProductAttribute("ViViPaw")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ViViPaw")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1,0 +1,40 @@
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-cream text-ink font-sans antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display text-ink;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { @apply bg-brand-50; }
+  ::-webkit-scrollbar-thumb { @apply bg-brand-200 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-brand-300; }
+}
+
+@layer components {
+  .container-app {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  .card {
+    @apply bg-white rounded-3xl shadow-soft border border-slate-100;
+  }
+  .input-base {
+    @apply w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white
+           text-sm text-ink placeholder:text-ink-muted
+           focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400
+           transition disabled:bg-slate-50 disabled:cursor-not-allowed;
+  }
+  .link-nav {
+    @apply text-sm font-medium text-ink-light hover:text-brand-500 transition-colors;
+  }
+}

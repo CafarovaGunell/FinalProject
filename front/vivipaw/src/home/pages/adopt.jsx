@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom'; 
+import { Link, useSearchParams } from 'react-router-dom'; 
 import { useWishlist } from '../context/WishlistContext';
 import AuthModal from '../components/AuthModal'; 
 import { 
@@ -19,6 +19,7 @@ import {
 
 const Adopt = () => {
   const { toggleWishlist, isInWishlist, user } = useWishlist();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [allPets, setAllPets] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -28,7 +29,11 @@ const Adopt = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  
+  // URL-dən gələn categoryId və ya ilkin olaraq 'All'
+  const initialCategory = searchParams.get('category') || 'All';
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+
   const [citySearchQuery, setCitySearchQuery] = useState('');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); 
@@ -39,12 +44,28 @@ const Adopt = () => {
 
     Promise.all([fetchPets, fetchCategories])
       .then(([petsRes, categoriesRes]) => {
-        setAllPets(petsRes.data);
+        console.log("Backend-dən gələn petlər:", petsRes.data);
+        
+        // C# API-lərindən gələn Newtonsoft/System.Text.Json $values strukturunu təmizləmək üçün:
+        let petsData = petsRes.data;
+        if (petsData && Array.isArray(petsData.$values)) petsData = petsData.$values;
+        setAllPets(petsData);
 
         if (categoriesRes && categoriesRes.data) {
-          setCategories(categoriesRes.data.map(c => c.name));
+          let catData = categoriesRes.data;
+          if (catData && Array.isArray(catData.$values)) catData = catData.$values;
+          console.log("Backend-dən gələn kateqoriyalar:", catData);
+          setCategories(catData);
         } else {
-          setCategories(['İt', 'Pişik', 'Quş', 'Akvarium', 'Gəmirici', 'Digər']);
+          setCategories([
+            { id: 1, name: 'İtlər' },
+            { id: 2, name: 'Pişiklər' },
+            { id: 3, name: 'Quşlar' },
+            { id: 4, name: 'Gəmiricilər' },
+            { id: 5, name: 'Sürünənlər' },
+            { id: 6, name: 'Akvarium və Balıqlar' },
+            { id: 7, name: 'Digər' }
+          ]);
         }
 
         setLoading(false);
@@ -68,7 +89,17 @@ const Adopt = () => {
     toggleWishlist(pet);
   };
 
-  // Backend xüsusiyyətlərinə tam uyğun filtrasiya (Şəhər axtarışı daxil olmaqla)
+  const handleCategorySelect = (catName) => {
+    setSelectedCategory(catName);
+    if (catName === 'All') {
+      searchParams.delete('category');
+    } else {
+      searchParams.set('category', catName);
+    }
+    setSearchParams(searchParams);
+  };
+
+  // Dəqiqləşdirilmiş və etibarlı filtrləmə məntiqi
   const filteredPets = allPets.filter(pet => {
     const searchLower = searchQuery.toLowerCase().trim();
     const cityLower = citySearchQuery.toLowerCase().trim();
@@ -77,11 +108,21 @@ const Adopt = () => {
     const breedMatch = pet.breed ? pet.breed.toLowerCase().includes(searchLower) : false;
     const matchesSearch = searchLower === '' || nameMatch || breedMatch;
     
-    // Şəhər/Məkan axtarışı (Location)
     const matchesCity = cityLower === '' || (pet.location && pet.location.toLowerCase().includes(cityLower));
 
-    const matchesCategory = selectedCategory === 'All' || 
-      (pet.categoryName && pet.categoryName.toLowerCase() === selectedCategory.toLowerCase());
+    // Kateqoriya uyğunluğunu müxtəlif variantlarda yoxlayırıq (categoryName, category?.name, categoryId)
+    if (selectedCategory === 'All') {
+      return matchesSearch && matchesCity;
+    }
+
+    const petCatName = (pet.categoryName || pet.category?.name || '').toString().trim().toLocaleLowerCase('az');
+    const selectedCatClean = selectedCategory.toString().trim().toLocaleLowerCase('az');
+
+    // Əgər backend yalnız categoryId qaytarırsa, ad ilə uyğunlaşdırırıq
+    const matchedCategoryObj = categories.find(c => c.name?.toString().trim().toLocaleLowerCase('az') === selectedCatClean);
+    const matchesCatId = matchedCategoryObj ? pet.categoryId === matchedCategoryObj.id : false;
+
+    const matchesCategory = (petCatName === selectedCatClean) || matchesCatId;
 
     return matchesSearch && matchesCity && matchesCategory;
   });
@@ -121,7 +162,7 @@ const Adopt = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-12 gap-8 items-start">
           
-          {/* Sol Filtr Paneli (Səliqəli və Kompakt) */}
+          {/* Sol Filtr Paneli */}
           <aside className="hidden lg:block lg:col-span-3 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-5 sticky top-24">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
@@ -130,8 +171,8 @@ const Adopt = () => {
               </div>
               {(selectedCategory !== 'All' || citySearchQuery !== '') && (
                 <button 
-                  onClick={() => { setSelectedCategory('All'); setCitySearchQuery(''); }}
-                  className="text-xs font-semibold text-rose-500 hover:text-rose-600 transition-colors"
+                  onClick={() => { handleCategorySelect('All'); setCitySearchQuery(''); }}
+                  className="text-xs font-semibold text-rose-500 hover:text-rose-600 transition-colors cursor-pointer"
                 >
                   Sıfırla
                 </button>
@@ -142,19 +183,32 @@ const Adopt = () => {
             <div className="space-y-2">
               <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Heyvan Növü</label>
               <div className="flex flex-col gap-1 max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
-                {['All', ...categories].map((cat) => {
-                  const isActive = selectedCategory === cat;
+                <button
+                  onClick={() => handleCategorySelect('All')}
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    selectedCategory === 'All' 
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' 
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Hamısı</span>
+                  {selectedCategory === 'All' && <Check size={14} className="stroke-[3]" />}
+                </button>
+
+                {categories.map((cat) => {
+                  const catName = typeof cat === 'string' ? cat : cat.name;
+                  const isActive = selectedCategory === catName;
                   return (
                     <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all relative overflow-hidden ${
+                      key={cat.id || catName}
+                      onClick={() => handleCategorySelect(catName)}
+                      className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                         isActive 
                           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' 
                           : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                       }`}
                     >
-                      <span>{cat === 'All' ? 'Hamısı' : cat}</span>
+                      <span>{catName}</span>
                       {isActive && <Check size={14} className="stroke-[3]" />}
                     </button>
                   );
@@ -162,7 +216,7 @@ const Adopt = () => {
               </div>
             </div>
 
-            {/* Şəhər Məkanı Axtarışı */}
+            {/* Şəhər / Məkan Axtarışı */}
             <div className="space-y-2 pt-2 border-t border-slate-100">
               <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Şəhər Məkanı</label>
               <div className="relative">
@@ -197,7 +251,7 @@ const Adopt = () => {
               <div className="flex w-full sm:w-auto gap-2 justify-end items-center">
                 <button 
                   onClick={() => setShowMobileFilters(!showMobileFilters)}
-                  className="lg:hidden flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+                  className="lg:hidden flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
                 >
                   <SlidersHorizontal size={16} />
                   <span>Filtrlər</span>
@@ -206,13 +260,13 @@ const Adopt = () => {
                 <div className="hidden sm:flex items-center border border-slate-200 rounded-xl p-1 bg-slate-50">
                   <button 
                     onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`p-2 rounded-lg transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     <Grid size={16} />
                   </button>
                   <button 
                     onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`p-2 rounded-lg transition-all cursor-pointer ${viewMode === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     <List size={16} />
                   </button>
@@ -220,14 +274,39 @@ const Adopt = () => {
               </div>
             </div>
 
-            {/* Mobil Filtr Bölməsi (Açılıb-bağlanan) */}
+            {/* Mobil Filtr Bölməsi */}
             {showMobileFilters && (
               <div className="lg:hidden bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <span className="font-bold text-sm text-slate-900">Süzgəclər</span>
-                  <button onClick={() => setShowMobileFilters(false)} className="text-xs text-slate-400 font-bold">Bağla</button>
+                  <button onClick={() => setShowMobileFilters(false)} className="text-xs text-slate-400 font-bold cursor-pointer">Bağla</button>
                 </div>
-                <div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Heyvan Növü</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      onClick={() => handleCategorySelect('All')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${selectedCategory === 'All' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+                    >
+                      Hamısı
+                    </button>
+                    {categories.map((cat) => {
+                      const catName = typeof cat === 'string' ? cat : cat.name;
+                      return (
+                        <button
+                          key={cat.id || catName}
+                          onClick={() => handleCategorySelect(catName)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${selectedCategory === catName ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+                        >
+                          {catName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100">
                   <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Şəhər Məkanı</label>
                   <input 
                     type="text"
@@ -240,7 +319,7 @@ const Adopt = () => {
               </div>
             )}
 
-            {/* Heyvan Kartları Siyahısı (Düzgün ölçülər və bütün xüsusiyyətlər yerində) */}
+            {/* Heyvan Kartları Siyahısı */}
             {filteredPets.length > 0 ? (
               <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6" : "flex flex-col gap-4"}>
                 {filteredPets.map((pet) => {
@@ -251,7 +330,7 @@ const Adopt = () => {
                       key={pet.id} 
                       className="group bg-white border border-slate-200/80 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
                     >
-                      {/* Şəkil Hissəsi (Ölçüsü optimallaşdırılıb: h-48 / aspect) */}
+                      {/* Şəkil Hissəsi */}
                       <div className="relative bg-slate-100 overflow-hidden h-48 w-full">
                         <Link to={`/adopt/${pet.id}`} className="block w-full h-full cursor-pointer">
                           <img 
@@ -261,7 +340,6 @@ const Adopt = () => {
                           />
                         </Link>
                         
-                        {/* Təcili (Urgent) Etiketi */}
                         {pet.isUrgent && (
                           <span className="absolute top-3 left-3 bg-rose-500 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1">
                             <AlertCircle size={12} />
@@ -269,10 +347,9 @@ const Adopt = () => {
                           </span>
                         )}
 
-                        {/* Sevimlilərə əlavə et (Ürək) */}
                         <button 
                           onClick={(e) => handleWishlistToggle(pet, e)}
-                          className={`absolute top-3 right-3 bg-white/90 hover:bg-white backdrop-blur-md p-2 rounded-xl transition-all shadow-md ${
+                          className={`absolute top-3 right-3 bg-white/90 hover:bg-white backdrop-blur-md p-2 rounded-xl transition-all shadow-md cursor-pointer ${
                             isFavorite ? 'text-rose-500 scale-105' : 'text-slate-400 hover:text-rose-500'
                           }`}
                         >
@@ -283,7 +360,7 @@ const Adopt = () => {
                         </button>
                       </div>
 
-                      {/* Məlumatlar (Ad, Cins, Yaş, Məkan və Tarix) */}
+                      {/* Məlumatlar */}
                       <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-4">
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
@@ -303,7 +380,6 @@ const Adopt = () => {
                             {pet.breed} {pet.ageText && `• ${pet.ageText}`}
                           </p>
 
-                          {/* Məkan və Tarix (Backend-dən gələn dəyərlər) */}
                           <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
                             {pet.location && (
                               <div className="flex items-center gap-1">
@@ -320,10 +396,9 @@ const Adopt = () => {
                           </div>
                         </div>
 
-                        {/* Sahiblənmək istəyirəm düyməsi */}
                         <Link 
                           to={`/adopt/${pet.id}`}
-                          className="w-full bg-slate-900 hover:bg-indigo-600 text-white font-bold py-2.5 rounded-xl text-xs transition-all duration-200 flex items-center justify-center gap-2"
+                          className="w-full bg-slate-900 hover:bg-indigo-600 text-white font-bold py-2.5 rounded-xl text-xs transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
                         >
                           <span>Sahiblənmək istəyirəm</span>
                           <ArrowRight size={14} />

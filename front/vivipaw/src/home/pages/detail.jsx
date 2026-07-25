@@ -6,7 +6,7 @@ import axios from 'axios';
 import { 
   FiArrowLeft, FiHeart, FiMapPin, FiPhone, FiMail, 
   FiInstagram, FiShare2, FiTag, FiShield, FiClock, 
-  FiCheck, FiExternalLink, FiInfo, FiAlertCircle 
+  FiCheck, FiExternalLink, FiInfo, FiAlertCircle, FiSend, FiX 
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 
@@ -19,6 +19,18 @@ const PetDetail = () => {
   const [error, setError] = useState(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Adoption Modal State-ləri
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    phone: '',
+    address: '',
+    housingType: 'Ev',
+    reason: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -44,6 +56,36 @@ const PetDetail = () => {
 
   const toggleFavorite = () => {
     setIsFavorite(prev => !prev);
+  };
+
+  // Müraciət formasının göndərilməsi
+  const handleAdoptSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      // Backend-də yaradacağın AdoptionRequests API endpoint-i
+      await axios.post('http://localhost:5123/api/AdoptionRequests', {
+        petId: parseInt(id),
+        userId: 1, // Əgər Auth sistemin varsa buraya daxil olan istifadəçinin ID-si gəlir
+        fullName: formData.fullName,
+        phone: formData.phone,
+        address: formData.address,
+        housingType: formData.housingType,
+        reason: formData.reason
+      });
+      
+      setSuccessMessage("Müraciətiniz uğurla göndərildi! Tezliklə sizinlə əlaqə saxlanılacaq.");
+      setTimeout(() => {
+        setIsModalOpen(false);
+        setSuccessMessage('');
+        setFormData({ fullName: '', phone: '', address: '', housingType: 'Ev', reason: '' });
+      }, 3000);
+    } catch (err) {
+      console.error("Müraciət göndərilərkən xəta:", err);
+      alert("Xəta baş verdi. Zəhmət olmasa yenidən cəhd edin.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -78,7 +120,7 @@ const PetDetail = () => {
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pet.petShopAddress || pet.location)}`;
 
   return (
-    <div className="min-h-screen bg-slate-50/70 py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50/70 py-6 sm:py-10 px-4 sm:px-6 lg:px-8 relative">
       <div className="max-w-5xl mx-auto space-y-6">
         
         {/* Üst Naviqasiya & Düymələr */}
@@ -178,15 +220,24 @@ const PetDetail = () => {
               <span>Elan tarixi: {pet.dateText}</span>
             </div>
 
-            {/* Əlaqə Düymələri */}
-            <div className="space-y-2.5 pt-2 border-t border-slate-100">
+            {/* Əlaqə və Övladlığa Götürmə Düymələri */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              
+              {/* Yeni Övladlığa Götürmə Müraciət Düyməsi */}
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
+              >
+                <FiHeart size={16} /> Övladlığa Götürmək Üçün Müraciət Et
+              </button>
+
               {pet.petShopPhone ? (
                 <div className="flex flex-col sm:flex-row gap-2.5">
                   <a 
                     href={`tel:${pet.petShopPhone}`}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-md shadow-indigo-200"
+                    className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-md"
                   >
-                    <FiPhone size={15} /> Zəng Et ({pet.petShopPhone})
+                    <FiPhone size={15} /> Zəng Et
                   </a>
                   
                   <a 
@@ -198,11 +249,7 @@ const PetDetail = () => {
                     <FaWhatsapp size={16} /> WhatsApp
                   </a>
                 </div>
-              ) : (
-                <div className="bg-amber-50 text-amber-700 p-3 rounded-xl text-xs font-semibold flex items-center gap-2">
-                  <FiInfo size={16} /> Telefon nömrəsi qeyd olunmayıb.
-                </div>
-              )}
+              ) : null}
             </div>
 
           </div>
@@ -265,6 +312,107 @@ const PetDetail = () => {
         </div>
 
       </div>
+
+      {/* ÖVLADLIĞA GÖTÜRMƏ MÜRACİƏT MODALI */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative space-y-5 animate-in fade-in zoom-in duration-200">
+            <button 
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all"
+            >
+              <FiX size={18} />
+            </button>
+
+            <div>
+              <h3 className="text-xl font-extrabold text-slate-900">Övladlığa Götürmə Müraciəti</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                <span className="font-bold text-indigo-600">{pet.name}</span> üçün müraciət formasını doldurun.
+              </p>
+            </div>
+
+            {successMessage ? (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-2xl text-xs font-bold text-center space-y-2">
+                <FiCheck size={24} className="mx-auto text-emerald-600" />
+                <p>{successMessage}</p>
+              </div>
+            ) : (
+              <form onSubmit={handleAdoptSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Ad və Soyad</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                    placeholder="Məs: Əli Məmmədov"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-600 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Əlaqə Nömrəsi</label>
+                  <input 
+                    type="tel" 
+                    required
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="+994 50 123 45 67"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-600 transition-all"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Yaşayış Növü</label>
+                    <select 
+                      value={formData.housingType}
+                      onChange={(e) => setFormData({...formData, housingType: e.target.value})}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-600 transition-all"
+                    >
+                      <option value="Ev">Ev (Şəxsi)</option>
+                      <option value="Kirayə">Kirayə Ev</option>
+                      <option value="Həyət evi">Həyət Evi</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Şəhər / Ünvan</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={formData.address}
+                      onChange={(e) => setFormData({...formData, address: e.target.value})}
+                      placeholder="Bakı ş."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-600 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Niyə bu heyvanı istəyirsiniz?</label>
+                  <textarea 
+                    rows="3"
+                    required
+                    value={formData.reason}
+                    onChange={(e) => setFormData({...formData, reason: e.target.value})}
+                    placeholder="Qısa məlumat yazın..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-600 transition-all resize-none"
+                  ></textarea>
+                </div>
+
+                <button 
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 disabled:opacity-50"
+                >
+                  <FiSend size={15} /> {submitting ? 'Göndərilir...' : 'Müraciəti Təsdiq Et'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

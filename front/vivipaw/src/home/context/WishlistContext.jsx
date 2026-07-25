@@ -1,69 +1,118 @@
-// src/context/WishlistContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import API from '../../services/api';
 
 const WishlistContext = createContext();
 
 export const WishlistProvider = ({ children }) => {
-  const { user } = useAuth(); // AuthContext-dən birbaşa user-i alırıq
+  const { user } = useAuth();
+  const [wishlist, setWishlist] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const [wishlist, setWishlist] = useState(() => {
-    const savedUserStr = localStorage.getItem('user');
-    if (savedUserStr) {
-      try {
-        const parsedUser = JSON.parse(savedUserStr);
-        const key = parsedUser.id || parsedUser.email || 'default_user';
-        const savedWishlist = localStorage.getItem(`viviPaw_wishlist_${key}`);
-        return savedWishlist ? JSON.parse(savedWishlist) : [];
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
-  });
-
-  useEffect(() => {
+  // Siyahını çəkən funksiyanı kənara çıxarırıq ki, istədiyimiz zaman yenidən çağırabilək
+  const fetchWishlist = async () => {
     if (!user) {
       setWishlist([]);
-    } else {
-      const key = user.id || user.email || 'default_user';
-      const saved = localStorage.getItem(`viviPaw_wishlist_${key}`);
-      setWishlist(saved ? JSON.parse(saved) : []);
+      return;
     }
-  }, [user]);
+
+    setLoading(true);
+    try {
+      const response = await API.get('/Wishlist');
+      const raw = response.data;
+      
+      let items = [];
+      if (Array.isArray(raw)) {
+        items = raw;
+      } else if (raw && Array.isArray(raw.$values)) {
+        items = raw.$values;
+      } else if (raw && Array.isArray(raw.items)) {
+        items = raw.items;
+      }
+
+      const enrichedItems = await Promise.all(
+        items.map(async (item) => {
+          const petId = item.petId || item.animalId || item.id;
+          if (item.pet || (item.name && item.imageUrl)) {
+            return item;
+          }
+
+          try {
+            const petRes = await API.get(`/Animals/${petId}`);
+            return {
+              ...item,
+              pet: petRes.data
+            };
+          } catch (err) {
+            return item;
+          }
+        })
+      );
+
+      setWishlist(enrichedItems);
+    } catch (error) {
+      console.error("Wishlist məlumatları yüklənərkən xəta:", error);
+      setWishlist([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (user) {
-      const key = user.id || user.email || 'default_user';
-      localStorage.setItem(`viviPaw_wishlist_${key}`, JSON.stringify(wishlist));
-    }
-  }, [wishlist, user]);
+    fetchWishlist();
+  }, [user]);
 
-  const toggleWishlist = (item) => {
+  const toggleWishlist = async (item) => {
     if (!user) return false;
 
-    setWishlist((prevWishlist) => {
-      const exists = prevWishlist.some((i) => i.id === item.id);
-      if (exists) {
-        return prevWishlist.filter((i) => i.id !== item.id);
-      } else {
-        return [...prevWishlist, item];
-      }
-    });
-    return true;
+    const petId = item.id || item.petId;
+    try {
+      await API.post('/Wishlist', { petId: petId, PetId: petId });
+      
+      // Əməliyyat bitən kimi siyahını avtomatik yenidən çəkirik
+      await fetchWishlist();
+      return true;
+    } catch (error) {
+      console.error("Wishlist yenilənərkən xəta:", error);
+      return false;
+    }
   };
 
-  // Siyahıdan tək-tək silmək üçün funksiya
-  const removeFromWishlist = (id) => {
-    setWishlist((prevWishlist) => prevWishlist.filter((item) => item.id !== id));
+  const removeFromWishlist = async (id) => {
+    try {
+      await API.delete(`/Wishlist/${id}`).catch(() => {
+        return API.post('/Wishlist', { petId: id, PetId: id });
+      });
+
+      // Siyahıdan dərhal silirik və ya yenidən çəkirik
+      setWishlist((prevWishlist) => prevWishlist.filter((item) => {
+        const itemId = item.petId || item.animalId || (item.pet && item.pet.id) || item.id;
+        return itemId !== id;
+      }));
+    } catch (error) {
+      console.error("Məhsul silinərkən xəta:", error);
+    }
   };
 
-  const clearWishlist = () => {
-    setWishlist([]);
+  const clearWishlist = async () => {
+    try {
+      await API.delete('/Wishlist').catch(async () => {
+        for (const item of wishlist) {
+          const id = item.petId || item.animalId || (item.pet && item.pet.id) || item.id;
+          await API.delete(`/Wishlist/${id}`).catch(() => {});
+        }
+      });
+      setWishlist([]);
+    } catch (error) {
+      console.error("Wishlist təmizlənərkən xəta:", error);
+    }
   };
 
   const isInWishlist = (id) => {
-    return wishlist.some((item) => item.id === id);
+    return wishlist.some((item) => {
+      const itemId = item.petId || item.animalId || (item.pet && item.pet.id) || item.id;
+      return itemId === id;
+    });
   };
 
   return (
@@ -71,9 +120,10 @@ export const WishlistProvider = ({ children }) => {
       value={{
         wishlist,
         toggleWishlist,
-        removeFromWishlist, // <-- BUDUR! Mütləq value içərisində olmalıdır ki, Wishlist səhifəsi onu oxuya bilsin.
+        removeFromWishlist,
         clearWishlist,
         isInWishlist,
+        loading,
         user
       }}
     >

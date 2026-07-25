@@ -1,41 +1,40 @@
 import React, { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { ShoppingBasket, Heart, Menu, X, PawPrint, User, LogOut } from 'lucide-react';
+import { ShoppingBasket, Heart, Menu, X, PawPrint, User, LogOut, Store } from 'lucide-react';
 import { useAuth } from "../context/AuthContext";
 import { useWishlist } from "../context/WishlistContext";
 import AuthModal from "../components/AuthModal";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false); // 2. Modalın açıq/bağlı state-i
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
   const { user, logout } = useAuth(); 
   const { wishlist } = useWishlist(); 
   const navigate = useNavigate();
 
   const basketCount = 2; 
-  const wishlistCount = user ? wishlist.length : 0; // Əgər istifadəçi yoxdursa say 0 görsөнsün
+  const wishlistCount = user ? wishlist.length : 0; 
 
   const navLinks = [
     { path: '/', label: 'Ana Səhifə' },
     { path: '/adopt', label: 'Övladlığa Götür' },
+    { path: '/shop', label: 'Mağaza' }, // <--- Yeni əlavə olunan Mağaza linki
     { path: '/petcare', label: 'Pet Baxımı' },
     { path: '/about', label: 'Haqqımızda' },
   ];
 
-  // 3. Wishlist ikonuna basıldıqda yoxlama edən funksiya
   const handleWishlistClick = (e) => {
     e.preventDefault();
     if (!user) {
-      setIsAuthModalOpen(true); // Hesab yoxdursa popap açılır
+      setIsAuthModalOpen(true);
     } else {
-      navigate('/wishlist'); // Hesab varsa səhifəyə keçir
+      navigate('/wishlist');
     }
   };
 
   return (
     <>
-      {/* Hesab Xəbərdarlıq Modalı (Popup) */}
       <AuthModal 
         isOpen={isAuthModalOpen} 
         onClose={() => setIsAuthModalOpen(false)} 
@@ -45,7 +44,7 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             
-            {/* Logo Hissəsi */}
+            {/* Logo */}
             <Link to="/" className="flex items-center gap-2 cursor-pointer group flex-shrink-0">
               <div className="bg-sky-600 p-2 rounded-xl text-white group-hover:bg-sky-500 transition-colors">
                 <PawPrint size={24} />
@@ -55,7 +54,7 @@ const Navbar = () => {
               </span>
             </Link>
 
-            {/* Naviqasiya Linkləri (Desktop) */}
+            {/* Desktop Linklər */}
             <div className="hidden md:flex items-center gap-6 lg:gap-8 font-medium">
               {navLinks.map((link) => (
                 <NavLink
@@ -74,10 +73,9 @@ const Navbar = () => {
               ))}
             </div>
 
-            {/* Sağ tərəf: İkonlar və Profil (Desktop) */}
+            {/* Sağ tərəf: İkonlar və Profil */}
             <div className="hidden md:flex items-center gap-4 lg:gap-6">
               
-              {/* İstək Listi (Wishlist) - DÜZƏLİŞ BURADA OLDU */}
               <button 
                 onClick={handleWishlistClick}
                 className="relative p-2 text-slate-300 hover:text-rose-400 transition-colors focus:outline-none cursor-pointer"
@@ -90,7 +88,6 @@ const Navbar = () => {
                 )}
               </button>
 
-              {/* Mağaza / Səbət (Basket) */}
               <Link to="/basket" className="relative p-2 text-slate-300 hover:text-sky-400 transition-colors focus:outline-none">
                 <ShoppingBasket size={22} />
                 {basketCount > 0 && (
@@ -100,21 +97,21 @@ const Navbar = () => {
                 )}
               </Link>
 
-              {/* Profil Giriş və ya İstifadəçi Məlumatı */}
+              {/* Profil Hissəsi - DÜZƏLİŞ: Adın üzərinə basdıqda /profile səhifəsinə keçir */}
               {user ? (
                 <div className="flex items-center gap-3 bg-slate-800/80 pl-3 pr-2 py-1.5 rounded-xl border border-slate-700/60">
-                  <div className="flex items-center gap-2">
+                  <Link to="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <div className="w-7 h-7 rounded-lg bg-sky-600/20 border border-sky-500/30 text-sky-400 flex items-center justify-center font-bold text-xs">
                       {user.fullName?.charAt(0).toUpperCase()}
                     </div>
                     <span className="text-xs font-semibold text-slate-200 max-w-[100px] truncate">
                       {user.fullName}
                     </span>
-                  </div>
+                  </Link>
                   <button
                     onClick={logout}
                     title="Çıxış et"
-                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer"
                   >
                     <LogOut size={16} />
                   </button>
@@ -142,7 +139,7 @@ const Navbar = () => {
         </div>
 
         {/* Mobil Menyu */}
-        <div className={`md:hidden bg-slate-900 border-t border-slate-800 overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[450px] opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className={`md:hidden bg-slate-900 border-t border-slate-800 overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="px-4 pt-3 pb-6 space-y-2.5 shadow-inner">
             
             {navLinks.map((link) => (
@@ -162,7 +159,6 @@ const Navbar = () => {
               </NavLink>
             ))}
             
-            {/* Mobil İstəklər və Səbət Bölməsi */}
             <div className="pt-4 pb-2 border-t border-slate-800 flex items-center justify-around">
               <button 
                 onClick={(e) => {
@@ -197,23 +193,23 @@ const Navbar = () => {
               </Link>
             </div>
 
-            {/* Mobil Giriş / İstifadəçi Bölməsi */}
+            {/* Mobil Profil / Giriş Bölməsi */}
             {user ? (
               <div className="pt-2 border-t border-slate-800 flex items-center justify-between px-2">
-                <div className="flex items-center gap-2">
+                <Link to="/profile" onClick={() => setIsOpen(false)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                   <div className="w-8 h-8 rounded-lg bg-sky-600/20 border border-sky-500/30 text-sky-400 flex items-center justify-center font-bold text-sm">
                     {user.fullName?.charAt(0).toUpperCase()}
                   </div>
                   <span className="text-sm font-medium text-slate-200">
                     {user.fullName}
                   </span>
-                </div>
+                </Link>
                 <button
                   onClick={() => {
                     logout();
                     setIsOpen(false);
                   }}
-                  className="flex items-center gap-1.5 text-xs text-rose-400 font-semibold bg-rose-500/10 px-3 py-2 rounded-xl"
+                  className="flex items-center gap-1.5 text-xs text-rose-400 font-semibold bg-rose-500/10 px-3 py-2 rounded-xl cursor-pointer"
                 >
                   <LogOut size={16} />
                   <span>Çıxış</span>
@@ -221,7 +217,7 @@ const Navbar = () => {
               </div>
             ) : (
               <Link to="/login" onClick={() => setIsOpen(false)} className="w-full mt-2 flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-500 text-white py-3 rounded-xl font-semibold shadow-lg shadow-sky-600/20 transition-colors">
-                <User size={18} />
+                <User size= {18} />
                 <span>Giriş et</span>
               </Link>
             )}

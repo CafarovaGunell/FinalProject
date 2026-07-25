@@ -1,63 +1,168 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using ViViPaw.Data;
+using ViViPaw.Helpers;
+using ViViPaw.Middlewares;
+using ViViPaw.Models.Identity;
+using ViViPaw.Profiles;
 using ViViPaw.Services;
+using ViViPaw.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllers();
-
-// AutoMapper-i layihəyə qeydiyyatdan keçiririk
-builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-
-builder.Services.AddEndpointsApiExplorer();
-
+// ---------- DbContext ----------
 builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+
+// ---------- Identity ----------
+builder.Services.AddIdentity<AppUser, AppRole>(opt =>
 {
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default"));
-});
+    opt.Password.RequireDigit = true;
+    opt.Password.RequiredLength = 6;
+    opt.Password.RequireNonAlphanumeric = false;
+    opt.Password.RequireUppercase = true;
+    opt.Password.RequireLowercase = true;
 
-// 1. TokenService-i Dependency Injection üçün qeydiyyatdan keçiririk
-builder.Services.AddScoped<TokenService>();
+    opt.User.RequireUniqueEmail = true;
 
-// 2. JWT Authentication konfiqurasiyası
-var secretKey = builder.Configuration["JwtSettings:SecretKey"]
-    ?? "ViViPaw_Super_Secret_Key_2026_Must_Be_Long_Enough_To_Satisfy_HmacSha512_Validation!";
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+    opt.Lockout.MaxFailedAccessAttempts = 5;
 })
-.AddJwtBearer(options =>
+.AddEntityFrameworkStores<AppDbContext>()
+.AddDefaultTokenProviders();
+
+// ---------- JWT ----------
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+var jwt = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
+
+if (jwt is null || string.IsNullOrWhiteSpace(jwt.Key))
+    throw new Exception("❌ Jwt konfiqurasiyası oxunmadı!");
+
+builder.Services.AddAuthentication(opt =>
 {
-    options.TokenValidationParameters = new TokenValidationParameters
+    opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(opt =>
+{
+    opt.TokenValidationParameters = new TokenValidationParameters
     {
+        ValidateIssuer = true,
+        ValidIssuer = jwt.Issuer,
+        ValidateAudience = true,
+        ValidAudience = jwt.Audience,
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-        ValidateIssuer = false,
-        ValidateAudience = false
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
     };
 });
 
-builder.Services.AddSwaggerGen();
+builder.Services.AddAuthorization();
 
-// CORS Konfiqurasiyası
-builder.Services.AddCors(options =>
+// ---------- AutoMapper ----------
+builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
+
+// ---------- Services (DI) ----------
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IPetShopService, PetShopService>();
+builder.Services.AddScoped<IVetProfileService, VetProfileService>();
+
+builder.Services.AddScoped<IPetService, PetService>();
+builder.Services.AddScoped<IAdoptionRequestService, AdoptionRequestService>();
+builder.Services.AddScoped<IWishListService, WishListService>();
+
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+
+builder.Services.AddScoped<IVetManagementService, VetManagementService>();
+builder.Services.AddScoped<IAppointmentService, AppointmentService>();
+
+builder.Services.AddScoped<ITestimonialService, TestimonialService>();
+builder.Services.AddScoped<IArticleService, ArticleService>();
+builder.Services.AddScoped<IProductReviewService, ProductReviewService>();
+builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+
+builder.Services.AddHttpContextAccessor();
+
+// ---------- CORS ----------
+var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+              ?? new[] { "http://localhost:5173" };
+
+builder.Services.AddCors(opt =>
 {
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
+    opt.AddPolicy("ReactApp", policy =>
+        policy.WithOrigins(origins)
+              .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowCredentials());
+});
+
+// ---------- Controllers ----------
+builder.Services.AddControllers()
+    .AddJsonOptions(opt =>
+    {
+        opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        opt.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+    });
+
+// ---------- Swagger (JWT dəstəkli) ----------
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "ViViPaw API", Version = "v1" });
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Sadəcə token-i yapışdırın (Bearer yazmağa ehtiyac yoxdur)."
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            Array.Empty<string>()
+        }
     });
 });
 
-// ----------------------------------------------------
 var app = builder.Build();
+
+// ---------- Seed ----------
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        await DbInitializer.SeedAsync(scope.ServiceProvider, builder.Configuration);
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Seed zamanı xəta baş verdi.");
+    }
+}
+
+// ---------- Pipeline ----------
+app.UseMiddleware<ExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -65,12 +170,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowAll");
-
-// 3. MÜTLƏQ BURA DİQQƏT: Authentication həmişə Authorization-dan əvvəl gəlməlidir!
+app.UseHttpsRedirection();
+app.UseStaticFiles();          // wwwroot/uploads üçün
+app.UseCors("ReactApp");
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

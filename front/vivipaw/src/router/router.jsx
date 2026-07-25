@@ -7,6 +7,8 @@ import About from "../home/pages/about";
 import Wishlist from "../home/pages/wishlist";
 import PetDetail from "../home/pages/detail";
 import Auth from "../home/pages/auth";
+import Appointments from "../home/pages/appointments";
+import UserProfile from "../home/pages/userprofile";
 
 
 
@@ -42,9 +44,16 @@ export const router=createBrowserRouter([
             {
                 element: <Auth />,
                 path: "login" 
+            },
+            {
+                element: <Appointments />,
+                path: "appointments"
+            },
+            {
+                element: <UserProfile />,
+                path: "profile"
             }
-                          
-            
+                               
         ]
      }
 ])
