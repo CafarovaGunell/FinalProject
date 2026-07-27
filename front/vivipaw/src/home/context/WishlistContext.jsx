@@ -1,132 +1,74 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import API from '../../services/api';
+import { wishlistApi } from '../../services/endpoints';
 
-const WishlistContext = createContext();
+const WishlistContext = createContext(null);
 
 export const WishlistProvider = ({ children }) => {
   const { user } = useAuth();
-  const [wishlist, setWishlist] = useState([]);
+  const [wishlist, setWishlist] = useState([]);   // WishListPetDto[]
+  const [ids, setIds] = useState([]);             // sürətli yoxlama üçün
   const [loading, setLoading] = useState(false);
 
-  // Siyahını çəkən funksiyanı kənara çıxarırıq ki, istədiyimiz zaman yenidən çağırabilək
-  const fetchWishlist = async () => {
-    if (!user) {
-      setWishlist([]);
-      return;
-    }
-
+  const fetchWishlist = useCallback(async () => {
+    if (!user) { setWishlist([]); setIds([]); return; }
     setLoading(true);
     try {
-      const response = await API.get('/Wishlist');
-      const raw = response.data;
-      
-      let items = [];
-      if (Array.isArray(raw)) {
-        items = raw;
-      } else if (raw && Array.isArray(raw.$values)) {
-        items = raw.$values;
-      } else if (raw && Array.isArray(raw.items)) {
-        items = raw.items;
-      }
-
-      const enrichedItems = await Promise.all(
-        items.map(async (item) => {
-          const petId = item.petId || item.animalId || item.id;
-          if (item.pet || (item.name && item.imageUrl)) {
-            return item;
-          }
-
-          try {
-            const petRes = await API.get(`/Animals/${petId}`);
-            return {
-              ...item,
-              pet: petRes.data
-            };
-          } catch (err) {
-            return item;
-          }
-        })
-      );
-
-      setWishlist(enrichedItems);
-    } catch (error) {
-      console.error("Wishlist məlumatları yüklənərkən xəta:", error);
-      setWishlist([]);
+      const [listRes, idsRes] = await Promise.all([
+        wishlistApi.list(),
+        wishlistApi.ids(),
+      ]);
+      if (listRes.success) setWishlist(listRes.data || []);
+      if (idsRes.success) setIds(idsRes.data || []);
+    } catch (e) {
+      console.error('Wishlist yüklənmədi:', e);
+      setWishlist([]); setIds([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchWishlist();
   }, [user]);
 
-  const toggleWishlist = async (item) => {
-    if (!user) return false;
+  useEffect(() => { fetchWishlist(); }, [fetchWishlist]);
 
-    const petId = item.id || item.petId;
+  /** Varsa silir, yoxdursa əlavə edir */
+  const toggleWishlist = async (petOrId) => {
+    if (!user) return false;
+    const petId = typeof petOrId === 'object' ? (petOrId.id ?? petOrId.petId) : petOrId;
+    if (!petId) return false;
+
+    // optimistik
+    setIds((prev) => prev.includes(petId) ? prev.filter(x => x !== petId) : [...prev, petId]);
+
     try {
-      await API.post('/Wishlist', { petId: petId, PetId: petId });
-      
-      // Əməliyyat bitən kimi siyahını avtomatik yenidən çəkirik
+      await wishlistApi.toggle(petId);
       await fetchWishlist();
       return true;
-    } catch (error) {
-      console.error("Wishlist yenilənərkən xəta:", error);
+    } catch (e) {
+      console.error('Wishlist toggle xətası:', e);
+      await fetchWishlist();
       return false;
     }
   };
 
-  const removeFromWishlist = async (id) => {
-    try {
-      await API.delete(`/Wishlist/${id}`).catch(() => {
-        return API.post('/Wishlist', { petId: id, PetId: id });
-      });
-
-      // Siyahıdan dərhal silirik və ya yenidən çəkirik
-      setWishlist((prevWishlist) => prevWishlist.filter((item) => {
-        const itemId = item.petId || item.animalId || (item.pet && item.pet.id) || item.id;
-        return itemId !== id;
-      }));
-    } catch (error) {
-      console.error("Məhsul silinərkən xəta:", error);
-    }
+  const removeFromWishlist = async (petId) => {
+    if (!ids.includes(petId)) return;
+    await toggleWishlist(petId);
   };
 
   const clearWishlist = async () => {
-    try {
-      await API.delete('/Wishlist').catch(async () => {
-        for (const item of wishlist) {
-          const id = item.petId || item.animalId || (item.pet && item.pet.id) || item.id;
-          await API.delete(`/Wishlist/${id}`).catch(() => {});
-        }
-      });
-      setWishlist([]);
-    } catch (error) {
-      console.error("Wishlist təmizlənərkən xəta:", error);
+    for (const id of [...ids]) {
+      try { await wishlistApi.toggle(id); } catch { /* ignore */ }
     }
+    await fetchWishlist();
   };
 
-  const isInWishlist = (id) => {
-    return wishlist.some((item) => {
-      const itemId = item.petId || item.animalId || (item.pet && item.pet.id) || item.id;
-      return itemId === id;
-    });
-  };
+  const isInWishlist = (petId) => ids.includes(petId);
 
   return (
-    <WishlistContext.Provider
-      value={{
-        wishlist,
-        toggleWishlist,
-        removeFromWishlist,
-        clearWishlist,
-        isInWishlist,
-        loading,
-        user
-      }}
-    >
+    <WishlistContext.Provider value={{
+      wishlist, ids, loading, user,
+      toggleWishlist, removeFromWishlist, clearWishlist, isInWishlist, fetchWishlist,
+    }}>
       {children}
     </WishlistContext.Provider>
   );

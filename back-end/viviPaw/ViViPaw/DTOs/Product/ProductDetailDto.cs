@@ -29,4 +29,8 @@ public class ProductDetailDto
     public double? AverageRating { get; set; }
     public int ReviewCount { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    public string? MainImageUrl { get; set; }
+
+    public List<ProductImageDto> Images { get; set; } = new();
 }

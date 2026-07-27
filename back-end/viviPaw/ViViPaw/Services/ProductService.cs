@@ -177,3 +177,6 @@ public class ProductService : IProductService
         return ApiResponse<string>.Ok("ok", "Məhsul silindi.");
     }
 }
+
+
+

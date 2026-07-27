@@ -1,18 +1,17 @@
-import React from 'react'
-import { RouterProvider } from 'react-router-dom'
-import './index.css'
-import { router } from './router/router'
-import { AuthProvider } from "./home/context/AuthContext";
-import { WishlistProvider } from "./home/context/WishlistContext"; // 1. Mütləq import edin
+import { RouterProvider } from 'react-router-dom';
+import { AuthProvider } from './home/context/AuthContext';
+import { WishlistProvider } from './home/context/WishlistContext';
+import { CartProvider } from './home/context/CartContext';
+import { router } from './routes/router';
 
-function App() {
+export default function App() {
   return (
     <AuthProvider>
-      <WishlistProvider> {/* 2. Bura əlavə edildi */}
-        <RouterProvider router={router}/>
+      <WishlistProvider>
+        <CartProvider>
+          <RouterProvider router={router} />
+        </CartProvider>
       </WishlistProvider>
     </AuthProvider>
-  )
+  );
 }
-
-export default App

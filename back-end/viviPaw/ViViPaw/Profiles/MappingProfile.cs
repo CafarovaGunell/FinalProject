@@ -118,6 +118,9 @@ public class MappingProfile : Profile
         CreateMap<PetShopCreateDto, PetShop>();
         CreateMap<PetShopUpdateDto, PetShop>();
 
+        // -------- ProductImage --------   ✅ BU SƏTRİ ƏLAVƏ ET
+        CreateMap<ProductImage, ProductImageDto>();
+
         // -------- Product --------
         CreateMap<Product, ProductGetDto>()
             .ForMember(d => d.FinalPrice, o => o.MapFrom(s => s.DiscountPrice ?? s.Price))
@@ -253,5 +256,8 @@ public class MappingProfile : Profile
         CreateMap<AppUser, UserGetDto>()
             .ForMember(d => d.Roles, o => o.Ignore())
             .ForMember(d => d.SocialMediaLinks, o => o.MapFrom(s => s.SocialMediaLinks));
+
+
+
     }
 }

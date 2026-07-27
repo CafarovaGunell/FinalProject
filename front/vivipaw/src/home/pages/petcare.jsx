@@ -1,426 +1,239 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Stethoscope, Calendar, Award, BookOpen, 
-  AlertCircle, Send, User, ChevronRight, Sparkles, Plus, X, Search, Phone, Mail, Globe, MapPin 
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  BookOpen, Search, Eye, Calendar, User, ArrowLeft, Sparkles, Stethoscope,
 } from 'lucide-react';
-import API from '../../services/api';
-import { useAuth } from '../context/AuthContext';
+import { articleApi, categoryApi } from '../../services/endpoints';
+import { CATEGORY_TYPE } from '../../utils/constants';
+import { formatDate } from '../../utils/helpers';
 
-const PetCare = () => {
-  const { user } = useAuth();
-  
-  const [activeTab, setActiveTab] = useState('veterinarians');
-  const [veterinarians, setVeterinarians] = useState([]);
-  const [articles, setArticles] = useState([]);
-  const [loading, setLoading] = useState(true);
+/* ═══════════ SADƏ MARKDOWN RENDER ═══════════ */
+const inline = (s) =>
+  s.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <strong key={j} className="text-slate-900 font-bold">{part.slice(2, -2)}</strong>
+      : <React.Fragment key={j}>{part}</React.Fragment>
+  );
 
-  // Həkim detalları üçün modal state
-  const [selectedVetDetail, setSelectedVetDetail] = useState(null);
-
-  // Randevu Form State-ləri
-  const [petInfo, setPetInfo] = useState(''); 
-  const [clientPhone, setClientPhone] = useState(''); 
-  const [vetSearchQuery, setVetSearchQuery] = useState('');
-  const [selectedVetId, setSelectedVetId] = useState('');
-  const [serviceType, setServiceType] = useState('Ümumi Müayinə');
-  const [appointmentDate, setAppointmentDate] = useState('');
-  const [notes, setNotes] = useState('');
-  
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState({ text: '', type: '' });
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [vetRes, articleRes] = await Promise.all([
-        API.get('/Veterinarians').catch(() => ({ data: [] })),
-        API.get('/PetCareArticles').catch(() => ({ data: [] }))
-      ]);
-
-      const extract = (res) => {
-        const raw = res?.data;
-        if (Array.isArray(raw)) return raw;
-        if (raw && Array.isArray(raw.$values)) return raw.$values;
-        return [];
-      };
-
-      setVeterinarians(extract(vetRes));
-      setArticles(extract(articleRes));
-    } catch (err) {
-      console.error("Məlumatları çəkərkən xəta:", err);
-    } finally {
-      setLoading(false);
+const renderContent = (text) => {
+  if (!text) return null;
+  return text.split(/\n{2,}/).map((block, i) => {
+    const t = block.trim();
+    // Tamamilə **başlıq** olan blok → alt başlıq
+    if (/^\*\*[^*]+\*\*$/.test(t)) {
+      return <h3 key={i} className="text-base font-black text-slate-900 pt-3">{t.slice(2, -2)}</h3>;
     }
-  };
+    // Nömrəli siyahı
+    if (/^\d+\.\s/.test(t)) {
+      const items = t.split('\n').filter(Boolean);
+      return (
+        <ol key={i} className="list-decimal list-inside space-y-1.5 text-sm text-slate-600 leading-relaxed">
+          {items.map((it, j) => <li key={j}>{inline(it.replace(/^\d+\.\s/, ''))}</li>)}
+        </ol>
+      );
+    }
+    return <p key={i} className="text-sm text-slate-600 leading-relaxed">{inline(t)}</p>;
+  });
+};
+
+const getAuthor  = (a) => a.authorName || a.veterinarianProfile?.userFullName || a.vetUserFullName || a.userFullName || 'viviPaw Redaksiya';
+const getCatName = (a) => a.categoryName || a.category?.name || '';
+const getDate    = (a) => a.dateText || formatDate(a.createdAt);
+
+/* ═══════════ SƏHİFƏ ═══════════ */
+const PetCare = () => {
+  const [articles, setArticles] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [cat, setCat] = useState('');
+  const [selected, setSelected] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    Promise.all([
+      articleApi.list({ pageSize: 50 }).catch(() => null),
+      categoryApi.all(CATEGORY_TYPE.ARTICLE).catch(() => null),
+    ]).then(([aRes, cRes]) => {
+      if (aRes?.success) {
+        const list = Array.isArray(aRes.data) ? aRes.data : (aRes.data?.items || []);
+        setArticles(list.filter((a) => a.isPublished));
+      }
+      if (cRes?.success) setCategories(cRes.data || []);
+    }).finally(() => setLoading(false));
   }, []);
 
-  const handleAppointmentSubmit = async (e) => {
-    e.preventDefault();
+  const filtered = useMemo(() => articles.filter((a) => {
+    const q = search.trim().toLowerCase();
+    const mq = !q || (a.title || '').toLowerCase().includes(q) || (a.shortDescription || '').toLowerCase().includes(q);
+    const mc = !cat || String(a.categoryId) === cat;
+    return mq && mc;
+  }), [articles, search, cat]);
 
-    if (!petInfo || !clientPhone || !selectedVetId || !appointmentDate) {
-      setMessage({ text: "Zəhmət olmasa bütün vacib sahələri doldurun.", type: "error" });
-      return;
-    }
-
+  const openArticle = async (slug) => {
+    setDetailLoading(true);
+    setSelected({}); // placeholder → skeleton
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     try {
-      setSubmitting(true);
-      setMessage({ text: '', type: '' });
-
-      await API.post('/VetAppointments', {
-        userId: user?.id || 1,
-        petShopId: Number(selectedVetId),
-        petInfo: petInfo,
-        clientPhone: clientPhone,
-        serviceType: serviceType,
-        appointmentDate: appointmentDate,
-        notes: notes || ""
-      });
-
-      setMessage({ text: "Randevunuz uğurla qeydə alındı!", type: "success" });
-      setPetInfo('');
-      setClientPhone('');
-      setNotes('');
-      setAppointmentDate('');
-      setVetSearchQuery('');
-      setSelectedVetId('');
-    } catch (err) {
-      console.error("Randevu xətası:", err);
-      const errorMsg = err.response?.data?.message || err.response?.data || "Seçdiyiniz tarix və saat üçün artıq randevu mövcuddur. Zəhmət olmasa başqa vaxt seçin.";
-      setMessage({ text: typeof errorMsg === 'string' ? errorMsg : "Seçdiyiniz tarix və saatda artıq başqa randevu var.", type: "error" });
+      const res = await articleApi.bySlug(slug);
+      setSelected(res?.success ? res.data : null);
+    } catch {
+      setSelected(null);
     } finally {
-      setSubmitting(false);
+      setDetailLoading(false);
     }
   };
 
-  const filteredVets = veterinarians.filter(v => {
-    const vetName = v.user?.fullName || v.fullName || '';
-    const clinicName = v.clinicName || v.petShopName || '';
-    const specialty = v.specialty || '';
-    const query = vetSearchQuery.toLowerCase();
-    return vetName.toLowerCase().includes(query) || 
-           clinicName.toLowerCase().includes(query) || 
-           specialty.toLowerCase().includes(query);
-  });
+  /* ═══════════ DETAL GÖRÜNÜŞÜ ═══════════ */
+  if (selected || detailLoading) {
+    const related = selected?.slug
+      ? articles.filter((x) => x.slug !== selected.slug && x.categoryId === selected.categoryId).slice(0, 3)
+      : [];
 
-  return (
-    <div className="bg-slate-50 min-h-screen font-sans pb-24">
-      {/* Header Hero Section */}
-      <section className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white py-16 px-4 text-center">
-        <div className="max-w-7xl mx-auto space-y-4">
-          <h1 className="text-3xl sm:text-5xl font-black">Dostunuzun Sağlamlığı Etibarlı Əllərdə</h1>
-          <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">Peşəkar baytar həkimlərimizdən anında randevu alın və ya faydalı məqalələri oxuyun.</p>
-          <div className="flex flex-wrap justify-center gap-3 pt-4">
-            <button 
-              onClick={() => setActiveTab('veterinarians')} 
-              className={`px-6 py-3 rounded-2xl font-bold text-sm cursor-pointer transition-all ${activeTab === 'veterinarians' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-white/10 text-slate-300 hover:bg-white/20'}`}
-            >
-              Baytarlar
-            </button>
-            <button 
-              onClick={() => setActiveTab('appointment')} 
-              className={`px-6 py-3 rounded-2xl font-bold text-sm cursor-pointer transition-all ${activeTab === 'appointment' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-white/10 text-slate-300 hover:bg-white/20'}`}
-            >
-              Randevu Təyin Et
-            </button>
-            <button 
-              onClick={() => setActiveTab('articles')} 
-              className={`px-6 py-3 rounded-2xl font-bold text-sm cursor-pointer transition-all ${activeTab === 'articles' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-white/10 text-slate-300 hover:bg-white/20'}`}
-            >
-              Məqalələr
-            </button>
-          </div>
-        </div>
-      </section>
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-800 antialiased pb-16">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-8">
+          <button onClick={() => { setSelected(null); window.scrollTo({ top: 0 }); }}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-amber-600 transition mb-6">
+            <ArrowLeft size={16} /> Bütün məqalələr
+          </button>
 
-      <div className="max-w-7xl mx-auto px-4 mt-10">
-        
-        {/* TAB 1: VETERINARIANS */}
-        {activeTab === 'veterinarians' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-2xl font-black text-slate-900">Mütəxəssis Baytarlarımız</h2>
-              <div className="relative w-full sm:w-72">
-                <input 
-                  type="text" 
-                  placeholder="Həkim və ya klinikaya görə axtar..." 
-                  value={vetSearchQuery}
-                  onChange={(e) => setVetSearchQuery(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 pl-10 text-sm shadow-sm focus:outline-none"
-                />
-                <Search size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
-              </div>
+          {detailLoading || !selected?.slug ? (
+            <div className="space-y-4">
+              <div className="h-10 bg-white rounded-2xl animate-pulse" />
+              <div className="h-72 bg-white rounded-3xl animate-pulse" />
+              <div className="h-40 bg-white rounded-3xl animate-pulse" />
             </div>
-
-            {loading ? (
-              <div className="text-center py-20 text-slate-400 font-medium">Yüklənir...</div>
-            ) : filteredVets.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 text-center border shadow-sm">
-                <p className="text-slate-500 font-semibold text-sm">Heç bir həkim tapılmadı.</p>
+          ) : (
+            <article className="space-y-6">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold">
+                {getCatName(selected) && (
+                  <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg">{getCatName(selected)}</span>
+                )}
+                <span className="flex items-center gap-1 text-slate-400"><Calendar size={12} /> {getDate(selected)}</span>
+                <span className="flex items-center gap-1 text-slate-400"><Eye size={12} /> {selected.viewCount || 0} baxış</span>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {filteredVets.map((vet) => {
-                  const name = vet.user?.fullName || vet.fullName || "Baytar Həkim";
-                  const clinic = vet.clinicName || vet.petShopName || "ViviVet Klinika";
-                  const specialty = vet.specialty || "Ümumi Baytarlıq";
-                  const bio = vet.bio || "Məlumat qeyd olunmayıb.";
-                  const experience = vet.experienceYears || 3;
-                  const phone = vet.phoneNumber || vet.phone || vet.user?.phoneNumber || "+994 12 000 00 00";
 
-                  return (
-                    <div 
-                      key={vet.id} 
-                      onClick={() => setSelectedVetDetail(vet)}
-                      className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all cursor-pointer flex flex-col justify-between group"
-                    >
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-4">
-                          <img 
-                            src={vet.imageUrl || vet.user?.imageUrl || "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400"} 
-                            alt={name} 
-                            className="w-16 h-16 rounded-2xl object-cover border shadow-inner"
-                          />
-                          <div>
-                            <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md flex items-center gap-1 w-fit mt-0.5">
-                              <MapPin size={10} /> {clinic}
-                            </span>
-                            <h3 className="text-lg font-black text-slate-900 mt-1.5 group-hover:text-blue-600 transition-colors">{name}</h3>
-                            <p className="text-blue-600 font-bold text-xs">{specialty}</p>
-                          </div>
-                        </div>
+              <h1 className="text-3xl sm:text-4xl font-black text-slate-900 leading-tight">{selected.title}</h1>
+              <p className="text-slate-500 text-sm sm:text-base leading-relaxed">{selected.shortDescription}</p>
 
-                        <p className="text-slate-600 text-xs line-clamp-2 leading-relaxed">{bio}</p>
-                      </div>
+              {selected.imageUrl && (
+                <img src={selected.imageUrl} alt={selected.title}
+                  className="w-full h-64 sm:h-96 object-cover rounded-3xl border border-slate-200 shadow-sm" />
+              )}
 
-                      <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
-                          <Phone size={12} className="text-blue-600" /> {phone}
-                        </span>
-                        <span className="text-xs font-bold text-blue-600 flex items-center gap-1">Ətraflı <ChevronRight size={14} /></span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 2: APPOINTMENT */}
-        {activeTab === 'appointment' && (
-          <div className="max-w-3xl mx-auto bg-white rounded-3xl p-8 shadow-xl border border-slate-100">
-            <h2 className="text-2xl font-black text-slate-900 mb-2 text-center">Baytarlıq Randevusu Təyin Et</h2>
-            <p className="text-xs text-slate-500 text-center mb-6">Seçdiyiniz tarix və saatda həkimin başqa randevusu varsa sistem xəta verəcək.</p>
-
-            {message.text && (
-              <div className={`p-4 rounded-2xl text-xs font-semibold flex items-center gap-2 mb-6 ${message.type === 'error' ? 'bg-rose-50 text-rose-600 border border-rose-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'}`}>
-                <AlertCircle size={18} className="shrink-0" />
-                <span>{message.text}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleAppointmentSubmit} className="space-y-6">
-              <div className="grid sm:grid-cols-2 gap-6">
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3">
+                <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><Stethoscope size={20} /></div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Ev Heyvanınızın Məlumatı</label>
-                  <input 
-                    type="text"
-                    value={petInfo}
-                    onChange={(e) => setPetInfo(e.target.value)}
-                    placeholder="Məsələn: Pişik - Mələk"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm text-slate-800 focus:outline-none focus:border-blue-600 font-medium"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Telefon Nömrəniz</label>
-                  <input 
-                    type="text"
-                    value={clientPhone}
-                    onChange={(e) => setClientPhone(e.target.value)}
-                    placeholder="+994 50 123 45 67"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm text-slate-800 focus:outline-none focus:border-blue-600 font-medium"
-                    required
-                  />
+                  <p className="text-sm font-bold text-slate-900">{getAuthor(selected)}</p>
+                  <p className="text-[11px] text-slate-400 font-semibold">Baytar mütəxəssis • Təsdiqlənmiş məzmun</p>
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-6">
-                <div className="relative">
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Həkim Seç</label>
-                  <input 
-                    type="text"
-                    placeholder="Həkim adı yazın..."
-                    value={vetSearchQuery}
-                    onChange={(e) => {
-                      setVetSearchQuery(e.target.value);
-                      setSelectedVetId('');
-                    }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 pl-10 text-sm text-slate-800 font-medium focus:outline-none focus:border-blue-600"
-                    required
-                  />
-                  <Search size={16} className="absolute left-3.5 top-11 text-slate-400" />
-
-                  {vetSearchQuery && !selectedVetId && (
-                    <div className="absolute z-30 left-0 right-0 mt-1 bg-white border rounded-2xl shadow-2xl max-h-48 overflow-y-auto">
-                      {filteredVets.map(v => (
-                        <div 
-                          key={v.id}
-                          onClick={() => {
-                            setVetSearchQuery(v.user?.fullName || v.fullName);
-                            setSelectedVetId(v.id);
-                          }}
-                          className="p-3.5 hover:bg-blue-50 text-xs font-semibold cursor-pointer border-b last:border-none"
-                        >
-                          {v.user?.fullName || v.fullName} - <span className="text-blue-600">{v.specialty}</span> ({v.clinicName || v.petShopName})
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Xidmət Növü</label>
-                  <select 
-                    value={serviceType} 
-                    onChange={(e) => setServiceType(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-medium focus:outline-none focus:border-blue-600"
-                  >
-                    <option value="Ümumi Müayinə">Ümumi Müayinə</option>
-                    <option value="Peyvəndləmə">Peyvəndləmə</option>
-                    <option value="Cərrahiyyə / Sterilizasiya">Cərrahiyyə / Sterilizasiya</option>
-                    <option value="Diş Təmizliyi və Baxımı">Diş Təmizliyi və Baxımı</option>
-                    <option value="Parazit Müalicəsi">Parazit Müalicəsi</option>
-                    <option value="Dəri və Tük Müalicəsi">Dəri və Tük Müalicəsi</option>
-                    <option value="Laboratoriya Analizi">Laboratoriya Analizi</option>
-                  </select>
-                </div>
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 space-y-4 shadow-sm">
+                {renderContent(selected.content)}
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Tarix və Saat</label>
-                <input 
-                  type="datetime-local" 
-                  value={appointmentDate}
-                  onChange={(e) => setAppointmentDate(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-medium focus:outline-none focus:border-blue-600"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Əlavə Qeydlər (İstəyə bağlı)</label>
-                <textarea 
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows="3"
-                  placeholder="Heyvanda hər hansı bir narahatlıq varsa qeyd edin..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-blue-600 resize-none"
-                ></textarea>
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={submitting}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-xl shadow-blue-600/20 cursor-pointer text-sm transition-all"
-              >
-                {submitting ? 'Yoxlanılır və Göndərilir...' : 'Randevu Təsdiqlə'}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* TAB 3: ARTICLES */}
-        {activeTab === 'articles' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-black text-slate-900">Faydalı Məqalələr</h2>
-            {articles.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 text-center border shadow-sm">
-                <p className="text-slate-500 font-semibold text-sm">Hələ ki heç bir məqalə əlavə olunmayıb.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {articles.map((art) => (
-                  <div key={art.id} className="bg-white border rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col">
-                    {art.imageUrl && <img src={art.imageUrl} alt={art.title} className="w-full h-48 object-cover" />}
-                    <div className="p-6 flex flex-col justify-between flex-1 space-y-3">
-                      <div>
-                        <h3 className="text-lg font-black text-slate-900">{art.title}</h3>
-                        <p className="text-slate-600 text-xs mt-2 line-clamp-3 leading-relaxed">{art.content}</p>
-                      </div>
-                      <span className="text-[11px] font-bold text-blue-600 pt-2">{new Date(art.createdDate || Date.now()).toLocaleDateString()}</span>
-                    </div>
+              {related.length > 0 && (
+                <div className="pt-6 space-y-4">
+                  <h2 className="text-lg font-black text-slate-900">Əlaqəli məqalələr</h2>
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    {related.map((r) => (
+                      <button key={r.id} onClick={() => openArticle(r.slug)}
+                        className="text-left bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition group">
+                        <img src={r.imageUrl} alt="" className="w-full h-24 object-cover" />
+                        <p className="p-3 text-xs font-bold text-slate-800 group-hover:text-amber-600 transition line-clamp-2">{r.title}</p>
+                      </button>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                </div>
+              )}
+            </article>
+          )}
+        </div>
+      </div>
+    );
+  }
 
+  /* ═══════════ SİYAHı GÖRÜNÜŞÜ ═══════════ */
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-800 antialiased pb-16">
+      {/* HERO */}
+      <div className="bg-gradient-to-b from-amber-900/5 via-slate-50 to-transparent py-12 border-b border-slate-200/50">
+        <div className="max-w-7xl mx-auto px-4 text-center space-y-3">
+          <span className="inline-flex items-center gap-1.5 bg-amber-100 text-amber-700 px-3 py-1.5 rounded-full text-[11px] font-bold">
+            <Sparkles size={13} /> Baytarlardan rəsmi tövsiyələr
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900">Pet Baxım Mərkəzi 📚</h1>
+          <p className="text-slate-500 max-w-xl mx-auto text-sm sm:text-base">
+            Qidalanma, sağlamlıq, təlim və gündəlik qulluq haqqında etibarlı məqalələr.
+          </p>
+        </div>
       </div>
 
-      {/* HƏKİM DETAL MODALI */}
-      {selectedVetDetail && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl relative space-y-6">
-            <button 
-              onClick={() => setSelectedVetDetail(null)} 
-              className="absolute top-6 right-6 bg-slate-100 hover:bg-slate-200 text-slate-700 p-2 rounded-full cursor-pointer transition-colors"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="flex items-center gap-4">
-              <img 
-                src={selectedVetDetail.imageUrl || selectedVetDetail.user?.imageUrl || "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400"} 
-                className="w-20 h-20 rounded-2xl object-cover border shadow-sm" 
-                alt="Vet" 
-              />
-              <div>
-                <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full flex items-center gap-1 w-fit">
-                  <MapPin size={10} /> {selectedVetDetail.clinicName || selectedVetDetail.petShopName || "ViviVet Klinika"}
-                </span>
-                <h3 className="text-xl font-black text-slate-900 mt-2">{selectedVetDetail.user?.fullName || selectedVetDetail.fullName}</h3>
-                <p className="text-blue-600 font-bold text-xs">{selectedVetDetail.specialty}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase">Təcrübə</span>
-                <p className="text-sm font-black text-slate-800">{selectedVetDetail.experienceYears || 3} il</p>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase">Əlaqə Nömrəsi</span>
-                <p className="text-sm font-black text-slate-800">{selectedVetDetail.phoneNumber || selectedVetDetail.phone || selectedVetDetail.user?.phoneNumber || "+994 50 000 00 00"}</p>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <h4 className="text-xs font-bold text-slate-400 uppercase">Həkim Haqqında / Bio</h4>
-              <p className="text-slate-600 text-sm leading-relaxed bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-                {selectedVetDetail.bio || "Məlumat qeyd olunmayıb."}
-              </p>
-            </div>
-
-            <button 
-              onClick={() => {
-                setSelectedVetId(selectedVetDetail.id);
-                setVetSearchQuery(selectedVetDetail.user?.fullName || selectedVetDetail.fullName);
-                setSelectedVetDetail(null);
-                setActiveTab('appointment');
-              }} 
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-2xl cursor-pointer text-sm shadow-lg shadow-blue-600/20 transition-all"
-            >
-              Bu Həkimə Randevu Götür
-            </button>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
+        {/* FİLTRLƏR */}
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          <div className="relative flex-1">
+            <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="Məqalə axtar..."
+              className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-amber-500 transition shadow-sm" />
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            <button onClick={() => setCat('')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+                !cat ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+              }`}>Hamısı</button>
+            {categories.map((c) => (
+              <button key={c.id} onClick={() => setCat(String(c.id))}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+                  cat === String(c.id) ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                }`}>{c.name}</button>
+            ))}
           </div>
         </div>
-      )}
+
+        {/* SİYAHı */}
+        {loading ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => <div key={i} className="h-80 bg-white rounded-2xl animate-pulse border border-slate-100" />)}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center">
+            <BookOpen className="mx-auto text-slate-300 mb-3" size={40} />
+            <p className="text-sm font-semibold text-slate-600">Axtarışa uyğun məqalə tapılmadı.</p>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filtered.map((a) => (
+              <article key={a.id} onClick={() => openArticle(a.slug)}
+                className="group bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col">
+                <div className="relative h-44 bg-slate-100 overflow-hidden">
+                  <img src={a.imageUrl} alt={a.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  {getCatName(a) && (
+                    <span className="absolute top-3 left-3 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shadow">
+                      {getCatName(a)}
+                    </span>
+                  )}
+                </div>
+                <div className="p-5 flex-1 flex flex-col gap-2.5">
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-amber-600 transition line-clamp-2">{a.title}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{a.shortDescription}</p>
+                  <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+                    <span className="flex items-center gap-1 truncate"><User size={12} className="text-amber-500 shrink-0" /> {getAuthor(a)}</span>
+                    <span className="flex items-center gap-2 shrink-0">
+                      <span className="flex items-center gap-1"><Eye size={12} /> {a.viewCount || 0}</span>
+                      <span className="flex items-center gap-1"><Calendar size={12} /> {getDate(a)}</span>
+                    </span>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,424 +1,435 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Link, useSearchParams } from 'react-router-dom'; 
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useWishlist } from '../context/WishlistContext';
-import AuthModal from '../components/AuthModal'; 
-import { 
-  Heart, 
-  Search, 
-  SlidersHorizontal, 
-  MapPin, 
-  Grid, 
-  List, 
-  Check, 
-  ArrowRight,
-  Sparkles,
-  Calendar,
-  AlertCircle
+import { useAuth } from '../context/AuthContext';
+import AuthModal from '../components/AuthModal';
+import { petApi, categoryApi } from '../../services/endpoints';
+import {
+  CATEGORY_TYPE, CITIES, PLACEHOLDER_PET,
+  ADOPTION_STATUS_COLOR, ADOPTION_STATUS_TEXT,
+} from '../../utils/constants';
+import { getPetIcon } from '../../utils/helpers';
+import {
+  Heart, Search, SlidersHorizontal, MapPin, Grid, List, Check,
+  ArrowRight, Sparkles, Calendar, AlertCircle, ChevronLeft, ChevronRight, X,
 } from 'lucide-react';
 
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Ən yeni' },
+  { value: 'oldest', label: 'Ən köhnə' },
+  { value: 'age_asc', label: 'Yaş ↑' },
+  { value: 'age_desc', label: 'Yaş ↓' },
+];
+
 const Adopt = () => {
-  const { toggleWishlist, isInWishlist, user } = useWishlist();
+  const { toggleWishlist, isInWishlist } = useWishlist();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [allPets, setAllPets] = useState([]);
+  const [pets, setPets] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [paging, setPaging] = useState({ page: 1, totalPages: 1, totalCount: 0 });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-
-  const [searchQuery, setSearchQuery] = useState('');
-  
-  // URL-dən gələn categoryId və ya ilkin olaraq 'All'
-  const initialCategory = searchParams.get('category') || 'All';
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-
-  const [citySearchQuery, setCitySearchQuery] = useState('');
+  const [authModal, setAuthModal] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [viewMode, setViewMode] = useState('grid'); 
+  const [viewMode, setViewMode] = useState('grid');
 
-  useEffect(() => {
-    const fetchPets = axios.get('http://localhost:5123/api/Animals');
-    const fetchCategories = axios.get('http://localhost:5123/api/Categories').catch(() => null);
-
-    Promise.all([fetchPets, fetchCategories])
-      .then(([petsRes, categoriesRes]) => {
-        console.log("Backend-dən gələn petlər:", petsRes.data);
-        
-        // C# API-lərindən gələn Newtonsoft/System.Text.Json $values strukturunu təmizləmək üçün:
-        let petsData = petsRes.data;
-        if (petsData && Array.isArray(petsData.$values)) petsData = petsData.$values;
-        setAllPets(petsData);
-
-        if (categoriesRes && categoriesRes.data) {
-          let catData = categoriesRes.data;
-          if (catData && Array.isArray(catData.$values)) catData = catData.$values;
-          console.log("Backend-dən gələn kateqoriyalar:", catData);
-          setCategories(catData);
-        } else {
-          setCategories([
-            { id: 1, name: 'İtlər' },
-            { id: 2, name: 'Pişiklər' },
-            { id: 3, name: 'Quşlar' },
-            { id: 4, name: 'Gəmiricilər' },
-            { id: 5, name: 'Sürünənlər' },
-            { id: 6, name: 'Akvarium və Balıqlar' },
-            { id: 7, name: 'Digər' }
-          ]);
-        }
-
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Məlumat çəkilərkən xəta baş verdi:", err);
-        setError("Məlumatları yükləmək mümkün olmadı.");
-        setLoading(false);
-      });
-  }, []);
-
-  const handleWishlistToggle = (pet, e) => {
-    e.preventDefault(); 
-    e.stopPropagation();
-
-    if (!user) {
-      setIsAuthModalOpen(true);
-      return;
-    }
-
-    toggleWishlist(pet);
-  };
-
-  const handleCategorySelect = (catName) => {
-    setSelectedCategory(catName);
-    if (catName === 'All') {
-      searchParams.delete('category');
-    } else {
-      searchParams.set('category', catName);
-    }
-    setSearchParams(searchParams);
-  };
-
-  // Dəqiqləşdirilmiş və etibarlı filtrləmə məntiqi
-  const filteredPets = allPets.filter(pet => {
-    const searchLower = searchQuery.toLowerCase().trim();
-    const cityLower = citySearchQuery.toLowerCase().trim();
-
-    const nameMatch = pet.name ? pet.name.toLowerCase().includes(searchLower) : false;
-    const breedMatch = pet.breed ? pet.breed.toLowerCase().includes(searchLower) : false;
-    const matchesSearch = searchLower === '' || nameMatch || breedMatch;
-    
-    const matchesCity = cityLower === '' || (pet.location && pet.location.toLowerCase().includes(cityLower));
-
-    // Kateqoriya uyğunluğunu müxtəlif variantlarda yoxlayırıq (categoryName, category?.name, categoryId)
-    if (selectedCategory === 'All') {
-      return matchesSearch && matchesCity;
-    }
-
-    const petCatName = (pet.categoryName || pet.category?.name || '').toString().trim().toLocaleLowerCase('az');
-    const selectedCatClean = selectedCategory.toString().trim().toLocaleLowerCase('az');
-
-    // Əgər backend yalnız categoryId qaytarırsa, ad ilə uyğunlaşdırırıq
-    const matchedCategoryObj = categories.find(c => c.name?.toString().trim().toLocaleLowerCase('az') === selectedCatClean);
-    const matchesCatId = matchedCategoryObj ? pet.categoryId === matchedCategoryObj.id : false;
-
-    const matchesCategory = (petCatName === selectedCatClean) || matchesCatId;
-
-    return matchesSearch && matchesCity && matchesCategory;
+  // filtrlər
+  const [filters, setFilters] = useState({
+    search: searchParams.get('search') || '',
+    categoryId: searchParams.get('categoryId') || '',
+    city: searchParams.get('city') || '',
+    gender: searchParams.get('gender') || '',
+    size: searchParams.get('size') || '',
+    isVaccinated: searchParams.get('isVaccinated') || '',
+    isUrgent: searchParams.get('isUrgent') || '',
+    ownerType: searchParams.get('ownerType') || '',
+    sortBy: searchParams.get('sortBy') || 'newest',
+    page: Number(searchParams.get('page')) || 1,
   });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50/50 flex flex-col items-center justify-center text-slate-500">
-        <div className="relative flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-200 border-t-indigo-600"></div>
-          <Sparkles className="absolute text-indigo-600 animate-pulse" size={18} />
+  const [searchInput, setSearchInput] = useState(filters.search);
+
+  useEffect(() => {
+    categoryApi.all(CATEGORY_TYPE.PET)
+      .then((r) => r.success && setCategories(r.data))
+      .catch(() => {});
+  }, []);
+
+  const fetchPets = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = { pageSize: 12 };
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v !== '' && v !== null && v !== undefined) params[k] = v;
+      });
+
+      const res = await petApi.list(params);
+      if (res.success) {
+        setPets(res.data.items || []);
+        setPaging({
+          page: res.data.page,
+          totalPages: res.data.totalPages,
+          totalCount: res.data.totalCount,
+        });
+      }
+    } catch (e) {
+      console.error('Pet siyahısı xətası:', e);
+      setPets([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => { fetchPets(); }, [fetchPets]);
+
+  // URL sinxronizasiyası
+  useEffect(() => {
+    const p = new URLSearchParams();
+    Object.entries(filters).forEach(([k, v]) => {
+      if (v !== '' && !(k === 'page' && v === 1) && !(k === 'sortBy' && v === 'newest')) {
+        p.set(k, v);
+      }
+    });
+    setSearchParams(p, { replace: true });
+  }, [filters, setSearchParams]);
+
+  const setFilter = (key, value) =>
+    setFilters((f) => ({ ...f, [key]: value, page: key === 'page' ? value : 1 }));
+
+  const resetFilters = () => {
+    setSearchInput('');
+    setFilters({
+      search: '', categoryId: '', city: '', gender: '', size: '',
+      isVaccinated: '', isUrgent: '', ownerType: '', sortBy: 'newest', page: 1,
+    });
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setFilter('search', searchInput.trim());
+  };
+
+  const handleWishlist = async (e, petId) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!user) return setAuthModal(true);
+    await toggleWishlist(petId);
+  };
+
+  const activeFilterCount = ['categoryId', 'city', 'gender', 'size', 'isVaccinated', 'isUrgent', 'ownerType']
+    .filter((k) => filters[k] !== '').length;
+
+  /* ---------- Filtr paneli ---------- */
+  const FilterPanel = () => (
+    <div className="space-y-5">
+      {/* Kateqoriya */}
+      <div className="space-y-2">
+        <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Heyvan növü</label>
+        <div className="flex flex-col gap-1">
+          <button onClick={() => setFilter('categoryId', '')}
+            className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition ${
+              !filters.categoryId ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
+            }`}>
+            <span>Hamısı</span>{!filters.categoryId && <Check size={14} className="stroke-[3]" />}
+          </button>
+          {categories.map((c) => (
+            <button key={c.id} onClick={() => setFilter('categoryId', String(c.id))}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                filters.categoryId === String(c.id) ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
+              }`}>
+              <span className="flex items-center gap-2">{getPetIcon(c.name)} {c.name}</span>
+              {filters.categoryId === String(c.id) && <Check size={14} className="stroke-[3]" />}
+            </button>
+          ))}
         </div>
-        <p className="mt-4 text-sm font-semibold tracking-wide text-slate-600">Heyvan dostlarımız yüklənir...</p>
       </div>
-    );
-  }
+
+      {/* Şəhər */}
+      <div className="space-y-2 pt-3 border-t border-slate-100">
+        <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Şəhər</label>
+        <select value={filters.city} onChange={(e) => setFilter('city', e.target.value)}
+          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500">
+          <option value="">Bütün şəhərlər</option>
+          {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+
+      {/* Cins */}
+      <div className="space-y-2">
+        <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Cinsiyyət</label>
+        <div className="grid grid-cols-3 gap-1.5">
+          {[{ v: '', l: 'Hamısı' }, { v: '1', l: 'Erkək' }, { v: '2', l: 'Dişi' }].map(({ v, l }) => (
+            <button key={l} onClick={() => setFilter('gender', v)}
+              className={`px-2 py-2 rounded-xl text-[11px] font-bold transition ${
+                filters.gender === v ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}>{l}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Ölçü */}
+      <div className="space-y-2">
+        <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Ölçü</label>
+        <div className="grid grid-cols-4 gap-1.5">
+          {[{ v: '', l: 'Hamı' }, { v: '1', l: 'Kiçik' }, { v: '2', l: 'Orta' }, { v: '3', l: 'Böyük' }].map(({ v, l }) => (
+            <button key={l} onClick={() => setFilter('size', v)}
+              className={`px-1.5 py-2 rounded-xl text-[10px] font-bold transition ${
+                filters.size === v ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}>{l}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Digər */}
+      <div className="space-y-2 pt-3 border-t border-slate-100">
+        <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Digər</label>
+        {[
+          { key: 'isVaccinated', label: 'Peyvəndlənmiş' },
+          { key: 'isUrgent', label: 'Təcili' },
+        ].map(({ key, label }) => (
+          <label key={key} className="flex items-center gap-2.5 cursor-pointer py-1">
+            <input type="checkbox" checked={filters[key] === 'true'}
+              onChange={(e) => setFilter(key, e.target.checked ? 'true' : '')}
+              className="w-4 h-4 rounded accent-indigo-600" />
+            <span className="text-xs font-semibold text-slate-600">{label}</span>
+          </label>
+        ))}
+      </div>
+
+      {/* Elan sahibi */}
+      <div className="space-y-2">
+        <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Elan sahibi</label>
+        <div className="grid grid-cols-3 gap-1.5">
+          {[{ v: '', l: 'Hamı' }, { v: '1', l: 'Mağaza' }, { v: '2', l: 'Şəxsi' }].map(({ v, l }) => (
+            <button key={l} onClick={() => setFilter('ownerType', v)}
+              className={`px-2 py-2 rounded-xl text-[11px] font-bold transition ${
+                filters.ownerType === v ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}>{l}</button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-slate-50/60 text-slate-800 font-sans antialiased pb-16 relative">
-      
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
-      />
+    <div className="min-h-screen bg-slate-50/60 text-slate-800 antialiased pb-16">
+      <AuthModal isOpen={authModal} onClose={() => setAuthModal(false)} />
 
-      {/* Hero / Başlıq */}
       <div className="bg-gradient-to-b from-indigo-900/5 via-slate-50/50 to-transparent py-10 border-b border-slate-200/50 mb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-3">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Yeni bir dost xilas edin 🐾
-          </h1>
-          <p className="text-slate-500 max-w-2xl mx-auto text-sm sm:text-base font-normal">
-            Sizin kiçik bir addımınız onların bütün həyatını dəyişə bilər. Siyahıdan uyğun heyvanı seçib ona isti bir yuva bəxş edin.
+        <div className="max-w-7xl mx-auto px-4 text-center space-y-3">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900">Yeni bir dost xilas edin 🐾</h1>
+          <p className="text-slate-500 max-w-2xl mx-auto text-sm sm:text-base">
+            Sizin kiçik bir addımınız onların bütün həyatını dəyişə bilər.
           </p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Sol Filtr Paneli */}
-          <aside className="hidden lg:block lg:col-span-3 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-5 sticky top-24">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+
+          {/* SOL FİLTR */}
+          <aside className="hidden lg:block lg:col-span-3 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
-                <SlidersHorizontal size={16} className="text-indigo-600" />
-                <span>Süzgəclər</span>
+                <SlidersHorizontal size={16} className="text-indigo-600" /> Süzgəclər
+                {activeFilterCount > 0 && (
+                  <span className="bg-indigo-100 text-indigo-600 text-[10px] px-1.5 py-0.5 rounded-md">{activeFilterCount}</span>
+                )}
               </div>
-              {(selectedCategory !== 'All' || citySearchQuery !== '') && (
-                <button 
-                  onClick={() => { handleCategorySelect('All'); setCitySearchQuery(''); }}
-                  className="text-xs font-semibold text-rose-500 hover:text-rose-600 transition-colors cursor-pointer"
-                >
-                  Sıfırla
-                </button>
+              {activeFilterCount > 0 && (
+                <button onClick={resetFilters} className="text-xs font-semibold text-rose-500 hover:text-rose-600">Sıfırla</button>
               )}
             </div>
-
-            {/* Heyvan Növü / Kateqoriyalar */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Heyvan Növü</label>
-              <div className="flex flex-col gap-1 max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
-                <button
-                  onClick={() => handleCategorySelect('All')}
-                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    selectedCategory === 'All' 
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' 
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
-                >
-                  <span>Hamısı</span>
-                  {selectedCategory === 'All' && <Check size={14} className="stroke-[3]" />}
-                </button>
-
-                {categories.map((cat) => {
-                  const catName = typeof cat === 'string' ? cat : cat.name;
-                  const isActive = selectedCategory === catName;
-                  return (
-                    <button
-                      key={cat.id || catName}
-                      onClick={() => handleCategorySelect(catName)}
-                      className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                        isActive 
-                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' 
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                      }`}
-                    >
-                      <span>{catName}</span>
-                      {isActive && <Check size={14} className="stroke-[3]" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Şəhər / Məkan Axtarışı */}
-            <div className="space-y-2 pt-2 border-t border-slate-100">
-              <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Şəhər Məkanı</label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                <input 
-                  type="text"
-                  placeholder="Bakı, Sumqayıt..." 
-                  value={citySearchQuery} 
-                  onChange={(e) => setCitySearchQuery(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-700 placeholder:text-slate-400"
-                />
-              </div>
-            </div>
+            <FilterPanel />
           </aside>
 
-          {/* Əsas Kontent və Axtarış Paneli */}
           <main className="lg:col-span-9 space-y-6">
-            
-            {/* Üst Axtarış Paneli */}
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
-              <div className="relative w-full sm:max-w-md">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Ada və ya cinsə görə axtar..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs sm:text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-700 placeholder:text-slate-400"
-                />
-              </div>
 
-              <div className="flex w-full sm:w-auto gap-2 justify-end items-center">
-                <button 
-                  onClick={() => setShowMobileFilters(!showMobileFilters)}
-                  className="lg:hidden flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
-                >
-                  <SlidersHorizontal size={16} />
-                  <span>Filtrlər</span>
+            {/* AXTARIŞ PANELİ */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row gap-3 items-center">
+              <form onSubmit={handleSearchSubmit} className="relative w-full sm:flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Ad, cins və ya şəhərə görə axtar..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-20 py-2.5 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition" />
+                <button type="submit"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition">
+                  Axtar
                 </button>
-                
+              </form>
+
+              <div className="flex w-full sm:w-auto gap-2 items-center">
+                <select value={filters.sortBy} onChange={(e) => setFilter('sortBy', e.target.value)}
+                  className="flex-1 sm:flex-initial bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer">
+                  {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+
+                <button onClick={() => setShowMobileFilters(true)}
+                  className="lg:hidden relative flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 transition">
+                  <SlidersHorizontal size={16} /> Filtr
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-indigo-600 text-white text-[10px] w-5 h-5 rounded-full grid place-items-center font-bold">{activeFilterCount}</span>
+                  )}
+                </button>
+
                 <div className="hidden sm:flex items-center border border-slate-200 rounded-xl p-1 bg-slate-50">
-                  <button 
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-lg transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                  >
-                    <Grid size={16} />
-                  </button>
-                  <button 
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-lg transition-all cursor-pointer ${viewMode === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                  >
-                    <List size={16} />
-                  </button>
+                  {[{ m: 'grid', I: Grid }, { m: 'list', I: List }].map(({ m, I }) => (
+                    <button key={m} onClick={() => setViewMode(m)}
+                      className={`p-2 rounded-lg transition ${viewMode === m ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                      <I size={16} />
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* Mobil Filtr Bölməsi */}
-            {showMobileFilters && (
-              <div className="lg:hidden bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <span className="font-bold text-sm text-slate-900">Süzgəclər</span>
-                  <button onClick={() => setShowMobileFilters(false)} className="text-xs text-slate-400 font-bold cursor-pointer">Bağla</button>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Heyvan Növü</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      onClick={() => handleCategorySelect('All')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${selectedCategory === 'All' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
-                    >
-                      Hamısı
-                    </button>
-                    {categories.map((cat) => {
-                      const catName = typeof cat === 'string' ? cat : cat.name;
-                      return (
-                        <button
-                          key={cat.id || catName}
-                          onClick={() => handleCategorySelect(catName)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${selectedCategory === catName ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
-                        >
-                          {catName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100">
-                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Şəhər Məkanı</label>
-                  <input 
-                    type="text"
-                    placeholder="Bakı, Sumqayıt..." 
-                    value={citySearchQuery} 
-                    onChange={(e) => setCitySearchQuery(e.target.value)}
-                    className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold"
-                  />
-                </div>
-              </div>
+            {!loading && (
+              <p className="text-xs text-slate-500 font-semibold px-1">
+                <span className="text-indigo-600 font-bold">{paging.totalCount}</span> elan tapıldı
+              </p>
             )}
 
-            {/* Heyvan Kartları Siyahısı */}
-            {filteredPets.length > 0 ? (
-              <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6" : "flex flex-col gap-4"}>
-                {filteredPets.map((pet) => {
-                  const isFavorite = user ? isInWishlist(pet.id) : false;
-
-                  return (
-                    <div 
-                      key={pet.id} 
-                      className="group bg-white border border-slate-200/80 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
-                    >
-                      {/* Şəkil Hissəsi */}
-                      <div className="relative bg-slate-100 overflow-hidden h-48 w-full">
-                        <Link to={`/adopt/${pet.id}`} className="block w-full h-full cursor-pointer">
-                          <img 
-                            src={pet.imageUrl || '/placeholder.jpg'} 
-                            alt={pet.name} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-                          />
-                        </Link>
-                        
-                        {pet.isUrgent && (
-                          <span className="absolute top-3 left-3 bg-rose-500 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1">
-                            <AlertCircle size={12} />
-                            Təcili
-                          </span>
-                        )}
-
-                        <button 
-                          onClick={(e) => handleWishlistToggle(pet, e)}
-                          className={`absolute top-3 right-3 bg-white/90 hover:bg-white backdrop-blur-md p-2 rounded-xl transition-all shadow-md cursor-pointer ${
-                            isFavorite ? 'text-rose-500 scale-105' : 'text-slate-400 hover:text-rose-500'
-                          }`}
-                        >
-                          <Heart 
-                            size={18} 
-                            className={isFavorite ? 'fill-rose-500 text-rose-500' : 'text-slate-400'} 
-                          />
-                        </button>
-                      </div>
-
-                      {/* Məlumatlar */}
-                      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Link to={`/adopt/${pet.id}`} className="block group-hover:text-indigo-600 transition-colors">
-                              <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-snug">
-                                {pet.name}
-                              </h3>
-                            </Link>
-                            {pet.gender && (
-                              <span className="text-xs font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md">
-                                {pet.gender}
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="text-xs font-semibold text-slate-400">
-                            {pet.breed} {pet.ageText && `• ${pet.ageText}`}
-                          </p>
-
-                          <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
-                            {pet.location && (
-                              <div className="flex items-center gap-1">
-                                <MapPin size={13} className="text-indigo-500" />
-                                <span className="font-medium">{pet.location}</span>
-                              </div>
-                            )}
-                            {pet.dateText && (
-                              <div className="flex items-center gap-1 text-slate-400">
-                                <Calendar size={13} />
-                                <span>{pet.dateText}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <Link 
-                          to={`/adopt/${pet.id}`}
-                          className="w-full bg-slate-900 hover:bg-indigo-600 text-white font-bold py-2.5 rounded-xl text-xs transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
-                        >
-                          <span>Sahiblənmək istəyirəm</span>
-                          <ArrowRight size={14} />
-                        </Link>
-                      </div>
-
-                    </div>
-                  );
-                })}
+            {/* NƏTİCƏLƏR */}
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, i) => <div key={i} className="h-80 bg-white rounded-2xl animate-pulse border border-slate-100" />)}
+              </div>
+            ) : pets.length === 0 ? (
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-16 text-center">
+                <Sparkles className="mx-auto text-slate-300 mb-3" size={40} />
+                <p className="text-sm font-semibold text-slate-600">Axtarışınıza uyğun elan tapılmadı.</p>
+                <button onClick={resetFilters} className="mt-4 text-xs font-bold text-indigo-600 hover:underline">Filtrləri sıfırla</button>
               </div>
             ) : (
-              <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center text-slate-500">
-                <p className="text-sm font-semibold">Axtarışınıza uyğun heç bir elan tapılmadı.</p>
-              </div>
+              <>
+                <div className={viewMode === 'grid'
+                  ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6'
+                  : 'flex flex-col gap-4'}>
+                  {pets.map((pet) => {
+                    const fav = isInWishlist(pet.id);
+                    const isList = viewMode === 'list';
+                    return (
+                      <div key={pet.id}
+                        className={`group bg-white border border-slate-200/80 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${
+                          isList ? 'flex flex-col sm:flex-row' : 'flex flex-col'
+                        }`}>
+                        <div className={`relative bg-slate-100 overflow-hidden ${isList ? 'sm:w-56 h-48 sm:h-auto shrink-0' : 'h-48'}`}>
+                          <Link to={`/adopt/${pet.id}`} className="block w-full h-full">
+                            <img src={pet.mainImageUrl || PLACEHOLDER_PET} alt={pet.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          </Link>
+
+                          {pet.isUrgent && (
+                            <span className="absolute top-3 left-3 bg-rose-500 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1">
+                              <AlertCircle size={11} /> Təcili
+                            </span>
+                          )}
+
+                          <button onClick={(e) => handleWishlist(e, pet.id)}
+                            className={`absolute top-3 right-3 bg-white/90 hover:bg-white backdrop-blur-md p-2 rounded-xl shadow-md transition ${
+                              fav ? 'text-rose-500 scale-105' : 'text-slate-400 hover:text-rose-500'
+                            }`}>
+                            <Heart size={17} fill={fav ? 'currentColor' : 'none'} />
+                          </button>
+                        </div>
+
+                        <div className="p-5 flex-1 flex flex-col justify-between gap-3">
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <Link to={`/adopt/${pet.id}`} className="group-hover:text-indigo-600 transition min-w-0">
+                                <h3 className="text-base font-bold text-slate-900 truncate">{pet.name}</h3>
+                              </Link>
+                              <span className="text-[11px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md shrink-0">
+                                {pet.genderText}
+                              </span>
+                            </div>
+
+                            <p className="text-xs font-semibold text-slate-400 truncate">
+                              {pet.breed} • {pet.ageText}
+                            </p>
+
+                            <div className="flex flex-wrap gap-1.5">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${ADOPTION_STATUS_COLOR[pet.adoptionStatus]}`}>
+                                {ADOPTION_STATUS_TEXT[pet.adoptionStatus]}
+                              </span>
+                              {pet.isVaccinated && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-600 border border-teal-200">
+                                  💉 Peyvəndli
+                                </span>
+                              )}
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 border border-slate-200">
+                                {pet.ownerType === 1 ? '🏪 Mağaza' : '👤 Şəxsi'}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
+                              <span className="flex items-center gap-1"><MapPin size={13} className="text-indigo-500" />{pet.city}</span>
+                              <span className="flex items-center gap-1 text-slate-400"><Calendar size={13} />{pet.dateText}</span>
+                            </div>
+                          </div>
+
+                          <Link to={`/adopt/${pet.id}`}
+                            className="w-full bg-slate-900 hover:bg-indigo-600 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2">
+                            <span>Sahiblənmək istəyirəm</span><ArrowRight size={14} />
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* SƏHİFƏLƏMƏ */}
+                {paging.totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 pt-6">
+                    <button onClick={() => setFilter('page', paging.page - 1)} disabled={paging.page <= 1}
+                      className="w-10 h-10 rounded-xl border border-slate-200 bg-white grid place-items-center hover:bg-slate-50 disabled:opacity-40 transition">
+                      <ChevronLeft size={16} />
+                    </button>
+                    {Array.from({ length: Math.min(5, paging.totalPages) }, (_, i) => {
+                      const start = Math.max(1, Math.min(paging.page - 2, paging.totalPages - 4));
+                      return start + i;
+                    }).filter((p) => p <= paging.totalPages).map((p) => (
+                      <button key={p} onClick={() => setFilter('page', p)}
+                        className={`w-10 h-10 rounded-xl text-sm font-bold transition ${
+                          p === paging.page ? 'bg-indigo-600 text-white shadow-md' : 'border border-slate-200 bg-white hover:bg-slate-50'
+                        }`}>{p}</button>
+                    ))}
+                    <button onClick={() => setFilter('page', paging.page + 1)} disabled={paging.page >= paging.totalPages}
+                      className="w-10 h-10 rounded-xl border border-slate-200 bg-white grid place-items-center hover:bg-slate-50 disabled:opacity-40 transition">
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                )}
+              </>
             )}
-
           </main>
-
         </div>
       </div>
+
+      {/* MOBİL FİLTR DRAWER */}
+      {showMobileFilters && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowMobileFilters(false)} />
+          <div className="relative ml-auto w-[85%] max-w-sm bg-white h-full overflow-y-auto p-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <span className="font-bold text-slate-900">Süzgəclər</span>
+              <div className="flex items-center gap-2">
+                {activeFilterCount > 0 && (
+                  <button onClick={resetFilters} className="text-xs font-bold text-rose-500">Sıfırla</button>
+                )}
+                <button onClick={() => setShowMobileFilters(false)} className="p-1.5 rounded-lg hover:bg-slate-100">
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            <FilterPanel />
+            <button onClick={() => setShowMobileFilters(false)}
+              className="w-full mt-6 bg-indigo-600 text-white font-bold py-3 rounded-xl text-sm">
+              Nəticələri göstər ({paging.totalCount})
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

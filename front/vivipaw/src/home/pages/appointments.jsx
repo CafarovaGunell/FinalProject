@@ -1,183 +1,301 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, ShieldCheck, XCircle, Plus, Loader2, FileText, CheckCircle2 } from 'lucide-react';
-import axios from 'axios';
-import { Link } from 'react-router';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  Calendar, Clock, Stethoscope, PawPrint, Phone, X, CheckCircle2,
+  XCircle, AlertCircle, Ban, UserCheck, CalendarCheck, FileText,
+} from 'lucide-react';
+import { appointmentApi } from '../../services/endpoints';
+import { getError } from '../../services/api';
+import { useAuth } from '../context/AuthContext';
+import { APPOINTMENT_STATUS_TEXT, APPOINTMENT_STATUS_COLOR } from '../../utils/constants';
+import { formatDateTime, formatPrice, toDateInput } from '../../utils/helpers';
 
-const Appointments = () => {
-  const [appointments, setAppointments] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+const STATUS_FILTERS = [
+  { v: '', l: 'Hamısı' },
+  { v: '1', l: 'Gözləmədə' },
+  { v: '2', l: 'Təsdiqlənib' },
+  { v: '3', l: 'Tamamlandı' },
+  { v: '4', l: 'Ləğv edildi' },
+  { v: '5', l: 'Gəlmədi' },
+];
 
-  // API-dan istifadəçinin randevularını çəkmək
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        setIsLoading(true);
-        // İstifadəçi ID-si 1 olaraq qəbul edilir (Auth sisteminə görə dəyişə bilər)
-        const response = await axios.get('http://localhost:5123/api/VetAppointments/user/1');
-        setAppointments(response.data);
-      } catch (err) {
-        console.error("Randevular yüklənərkən xəta:", err);
-        // Əgər backend hələ hazır deyilsə, dizaynı test etmək üçün saxta məlumatlar veririk
-        setAppointments(getMockAppointments());
-      } finally {
-        setIsLoading(false);
-      }
-    };
+/* Müxtəlif DTO variantlarına qarşı müdafiəli oxuma */
+const getClinic  = (a) => a.clinicName || a.vetProfile?.clinicName || a.veterinarianProfile?.clinicName || 'Klinika';
+const getDoctor  = (a) => a.doctorName || a.vetUserFullName || a.vetProfile?.userFullName || '';
+const getService = (a) => a.serviceName || a.vetServiceName || a.vetService?.name || 'Xidmət';
+const getCustomer= (a) => a.customerFullName || a.customer?.fullName || a.clientName || '';
+const getPet     = (a) => a.petName || a.pet?.name || a.petInfo || '';
 
-    fetchAppointments();
-  }, []);
+/* ═══════════ LƏĞV MODALI ═══════════ */
+const CancelModal = ({ appt, onClose, onDone }) => {
+  const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  // Test məqsədli Mock Data (Backend qoşulana qədər görünməsi üçün)
-  const getMockAppointments = () => [
-    {
-      id: 1,
-      petShopName: "Luna Vet & PetShop",
-      petShopAddress: "Nizami küç. 42, Bakı",
-      serviceType: "Ümumi Müayinə",
-      appointmentDate: "2026-06-15T14:30:00",
-      status: "Təsdiqləndi",
-      notes: "Püşüyün peyvənd vaxtıdır, ümumi yoxlanış olunacaq."
-    },
-    {
-      id: 2,
-      petShopName: "Happy Paws Klinika",
-      petShopAddress: "Bülbül pr. 12, Bakı",
-      serviceType: "Baxım & Grooming",
-      appointmentDate: "2026-06-20T11:00:00",
-      status: "Gözləmədə",
-      notes: "Tük kəsimi və dırnaq təmizliyi."
-    }
-  ];
-
-  // Randevunun ləğv edilməsi funksiyası
-  const handleCancelAppointment = async (id) => {
-    if (!window.confirm("Bu randevunu ləğv etmək istədiyinizə əminsinizmi?")) return;
-    
+  const submit = async (e) => {
+    e.preventDefault();
+    setLoading(true); setError('');
     try {
-      await axios.delete(`http://localhost:5123/api/VetAppointments/${id}`);
-      setAppointments(appointments.filter(app => app.id !== id));
+      const res = await appointmentApi.cancel(appt.id, reason.trim() || undefined);
+      if (res?.success) onDone();
+      else setError(res?.message || 'Ləğv edilmədi.');
     } catch (err) {
-      console.error("Ləğv edərkən xəta baş verdi:", err);
-      // Əgər backend yoxdursa sadəcə UI-dan silək ki, dizayn işlədiyini görə biləsən
-      setAppointments(appointments.filter(app => app.id !== id));
+      setError(getError(err, 'Ləğv edilmədi.'));
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (isLoading) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative space-y-4" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-xl">
+          <X size={18} />
+        </button>
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-rose-50 text-rose-500 rounded-2xl"><XCircle size={22} /></div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Randevunu ləğv et</h3>
+            <p className="text-[11px] text-slate-400">{getClinic(appt)} • {formatDateTime(appt.startTime)}</p>
+          </div>
+        </div>
+        {error && (
+          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-semibold flex items-start gap-2">
+            <AlertCircle size={15} className="shrink-0 mt-0.5" /> {error}
+          </div>
+        )}
+        <form onSubmit={submit} className="space-y-3">
+          <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3}
+            placeholder="Səbəb (isteğe bağlı)" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-rose-400 resize-none" />
+          <button type="submit" disabled={loading}
+            className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center gap-2 disabled:opacity-50">
+            {loading ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /> : <><Ban size={16} /> Ləğvi Təsdiqlə</>}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════ SƏHİFƏ ═══════════ */
+const Appointments = () => {
+  const { user, isVet } = useAuth();
+  const [tab, setTab] = useState('customer');
+  const [list, setList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState('');
+  const [vetDate, setVetDate] = useState('');
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [acting, setActing] = useState(null);
+  const [toast, setToast] = useState('');
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
+
+  const fetchList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = tab === 'vet'
+        ? await appointmentApi.vetList(status || undefined, vetDate || undefined)
+        : await appointmentApi.mine(status || undefined);
+      const data = Array.isArray(res?.data) ? res.data : (res?.data?.items || []);
+      setList(data);
+    } catch (e) {
+      console.error('Randevular yüklənmədi:', e);
+      setList([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [tab, status, vetDate]);
+
+  useEffect(() => { fetchList(); }, [fetchList]);
+
+  const act = async (id, newStatus, reason) => {
+    setActing(id);
+    try {
+      const res = await appointmentApi.setStatus(id, newStatus, reason);
+      if (res?.success) { showToast('✅ Status yeniləndi'); fetchList(); }
+      else showToast(res?.message || 'Xəta baş verdi.');
+    } catch (e) {
+      showToast(getError(e, 'Xəta baş verdi.'));
+    } finally {
+      setActing(null);
+    }
+  };
+
+  const VetActions = ({ a }) => {
+    const busy = acting === a.id;
+    const btn = 'flex-1 py-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 disabled:opacity-50';
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
-        <Loader2 className="animate-spin text-blue-600" size={40} />
-        <p className="text-slate-500 font-medium text-sm">Randevularınız yüklənir...</p>
+      <div className="flex gap-2 pt-3 border-t border-slate-100">
+        {a.status === 1 && (
+          <button disabled={busy} onClick={() => act(a.id, 2)}
+            className={btn + ' bg-emerald-600 hover:bg-emerald-700 text-white'}>
+            <UserCheck size={13} /> Təsdiqlə
+          </button>
+        )}
+        {a.status === 2 && (
+          <>
+            <button disabled={busy} onClick={() => act(a.id, 3)}
+              className={btn + ' bg-sky-600 hover:bg-sky-700 text-white'}>
+              <CheckCircle2 size={13} /> Tamamlandı
+            </button>
+            <button disabled={busy} onClick={() => act(a.id, 5)}
+              className={btn + ' bg-slate-200 hover:bg-slate-300 text-slate-700'}>
+              Gəlmədi
+            </button>
+          </>
+        )}
+        {(a.status === 1 || a.status === 2) && (
+          <button disabled={busy} onClick={() => setCancelTarget(a)}
+            className={btn + ' bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200'}>
+            <Ban size={13} /> Ləğv
+          </button>
+        )}
       </div>
     );
-  }
+  };
 
   return (
-    <div className="bg-slate-50 min-h-screen text-slate-800 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        
-        {/* Üst Başlıq hissəsi */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm">
-          <div>
-            <div className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
-              <Calendar size={14} /> Şəxsi Kabinet
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900">Mənim Randevularım</h1>
-            <p className="text-slate-500 text-xs sm:text-sm mt-1">
-              Baytarlıq və baxım mərkəzlərinə aldığınız aktiv randevuları buradan izləyin.
-            </p>
-          </div>
+    <div className="min-h-screen bg-slate-50 text-slate-800 antialiased pb-16">
+      {cancelTarget && (
+        <CancelModal appt={cancelTarget} onClose={() => setCancelTarget(null)}
+          onDone={() => { setCancelTarget(null); showToast('Randevu ləğv edildi'); fetchList(); }} />
+      )}
 
-          <Link 
-            to="/petcare" 
-            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-2xl font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/20 transition-all self-start sm:self-auto"
-          >
-            <Plus size={16} /> Yeni Randevu Al
+      {toast && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[70] bg-slate-900 text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-2xl">
+          {toast}
+        </div>
+      )}
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 space-y-6">
+        {/* BAŞLIQ */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3.5 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100">
+              <CalendarCheck className="w-7 h-7" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Randevularım</h1>
+              <p className="text-sm text-slate-500 mt-0.5">Bütün görüşləriniz bir yerdə</p>
+            </div>
+          </div>
+          <Link to="/vets" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-3 rounded-xl transition shadow-md shadow-emerald-600/15">
+            <Stethoscope size={15} /> Yeni Randevu
           </Link>
         </div>
 
-        {/* Randevular siyahısı */}
-        {appointments.length > 0 ? (
-          <div className="space-y-4">
-            {appointments.map((item) => {
-              const formattedDate = new Date(item.appointmentDate).toLocaleString('az-AZ', {
-                dateStyle: 'medium',
-                timeStyle: 'short'
-              });
-
-              const isConfirmed = item.status === 'Təsdiqləndi';
-
-              return (
-                <div 
-                  key={item.id} 
-                  className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-6"
-                >
-                  <div className="space-y-3 flex-1">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <span className={`text-[10px] font-extrabold px-3 py-1 rounded-lg uppercase tracking-wider ${
-                        isConfirmed ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60' : 'bg-amber-50 text-amber-600 border border-amber-200/60'
-                      }`}>
-                        {item.status}
-                      </span>
-                      <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">
-                        {item.serviceType}
-                      </span>
-                    </div>
-
-                    <h3 className="text-lg font-black text-slate-900">{item.petShopName}</h3>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-500 font-medium">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin size={14} className="text-slate-400 shrink-0" />
-                        <span className="truncate">{item.petShopAddress}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Clock size={14} className="text-slate-400 shrink-0" />
-                        <span>{formattedDate}</span>
-                      </div>
-                    </div>
-
-                    {item.notes && (
-                      <div className="flex items-start gap-1.5 bg-slate-50 p-3 rounded-2xl border border-slate-100 text-xs text-slate-600">
-                        <FileText size={14} className="text-blue-500 shrink-0 mt-0.5" />
-                        <p><strong className="text-slate-700">Qeyd:</strong> {item.notes}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex md:flex-col items-center justify-end w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 border-slate-100">
-                    <button 
-                      onClick={() => handleCancelAppointment(item.id)}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-4 py-2.5 rounded-xl transition-all"
-                    >
-                      <XCircle size={16} /> Randevunu Ləğv Et
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="bg-white rounded-3xl border border-slate-200/80 py-20 text-center space-y-3">
-            <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto">
-              <Calendar size={28} />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">Aktiv randevunuz yoxdur</h3>
-            <p className="text-slate-400 text-xs max-w-xs mx-auto">
-              Dostunuzun sağlamlığı üçün dərhal baytarlıq mərkəzlərimizdən vaxt ayıra bilərsiniz.
-            </p>
-            <div className="pt-2">
-              <Link 
-                to="/petcare" 
-                className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-xs transition-all shadow-sm"
-              >
-                Randevulara Bax
-              </Link>
-            </div>
+        {/* BAYTAR ÜÇÜN TAB */}
+        {isVet && (
+          <div className="flex bg-white p-1 rounded-2xl border border-slate-200 w-fit">
+            {[{ v: 'customer', l: 'Müştəri kimi' }, { v: 'vet', l: 'Klinika tərəfi' }].map(({ v, l }) => (
+              <button key={v} onClick={() => { setTab(v); setStatus(''); }}
+                className={`px-5 py-2.5 text-xs font-bold rounded-xl transition ${
+                  tab === v ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'
+                }`}>{l}</button>
+            ))}
           </div>
         )}
 
+        {/* FİLTRLƏR */}
+        <div className="flex flex-wrap items-center gap-2">
+          {STATUS_FILTERS.map(({ v, l }) => (
+            <button key={v} onClick={() => setStatus(v)}
+              className={`px-3.5 py-2 rounded-xl text-[11px] font-bold transition ${
+                status === v ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+              }`}>{l}</button>
+          ))}
+          {tab === 'vet' && (
+            <input type="date" value={vetDate} onChange={(e) => setVetDate(e.target.value)}
+              className="ml-auto bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-600 focus:outline-none focus:border-emerald-500" />
+          )}
+        </div>
+
+        {/* SİYAHı */}
+        {loading ? (
+          <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="h-36 bg-white rounded-2xl animate-pulse border border-slate-100" />)}</div>
+        ) : list.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded-3xl p-14 text-center space-y-4">
+            <div className="w-16 h-16 bg-emerald-50 text-emerald-400 rounded-full grid place-items-center mx-auto">
+              <Calendar size={30} />
+            </div>
+            <h2 className="text-lg font-bold text-slate-900">Randevu tapılmadı</h2>
+            <p className="text-sm text-slate-500 max-w-sm mx-auto">
+              {tab === 'vet' ? 'Bu filtrə uyğun görüş yoxdur.' : 'Hələ heç bir randevunuz yoxdur. Baytar seçib ilk görüşünüzü yaradın.'}
+            </p>
+            {tab === 'customer' && (
+              <Link to="/vets" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 py-3 rounded-xl transition">
+                Baytarlara Bax
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {list.map((a) => (
+              <div key={a.id} className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-lg transition-shadow">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="flex items-start gap-4 min-w-0">
+                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl shrink-0">
+                      <Stethoscope size={22} />
+                    </div>
+                    <div className="min-w-0 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-bold text-slate-900">{getClinic(a)}</h3>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${APPOINTMENT_STATUS_COLOR[a.status]}`}>
+                          {APPOINTMENT_STATUS_TEXT[a.status]}
+                        </span>
+                      </div>
+                      {tab === 'vet' && getCustomer(a) && (
+                        <p className="text-xs font-semibold text-slate-600">👤 {getCustomer(a)} {a.clientPhone && <span className="text-slate-400">• {a.clientPhone}</span>}</p>
+                      )}
+                      {getDoctor(a) && tab === 'customer' && (
+                        <p className="text-xs text-slate-400 font-semibold">{getDoctor(a)}</p>
+                      )}
+                      <p className="text-xs text-slate-500 font-semibold flex items-center gap-1.5">
+                        <FileText size={13} className="text-emerald-500" /> {getService(a)}
+                      </p>
+                      {getPet(a) && (
+                        <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                          <PawPrint size={13} className="text-emerald-500" /> {getPet(a)}
+                        </p>
+                      )}
+                      {a.notes && <p className="text-[11px] text-slate-400 italic">“{a.notes}”</p>}
+                      {a.cancelReason && (
+                        <p className="text-[11px] text-rose-500 font-semibold flex items-center gap-1">
+                          <AlertCircle size={12} /> {a.cancelReason}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex sm:flex-col items-center sm:items-end gap-3 sm:gap-1.5 shrink-0">
+                    <p className="text-sm font-black text-slate-900 flex items-center gap-1.5">
+                      <Calendar size={14} className="text-emerald-500" /> {formatDateTime(a.startTime)}
+                    </p>
+                    <p className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                      <Clock size={12} /> {a.endTime ? `${new Date(a.endTime).toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                    </p>
+                    <p className="text-sm font-black text-emerald-600">{formatPrice(a.priceSnapshot ?? a.price)}</p>
+                  </div>
+                </div>
+
+                {/* ƏMƏLİYYATLAR */}
+                {tab === 'vet' ? (
+                  <VetActions a={a} />
+                ) : (
+                  (a.status === 1 || a.status === 2) && (
+                    <div className="flex gap-2 pt-3 border-t border-slate-100 mt-3">
+                      <button onClick={() => setCancelTarget(a)}
+                        className="flex-1 py-2 rounded-lg text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition flex items-center justify-center gap-1">
+                        <Ban size={13} /> Ləğv et
+                      </button>
+                    </div>
+                  )
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

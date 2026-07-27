@@ -1,418 +1,345 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router';
-import axios from 'axios';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import {
+  Heart, MapPin, Calendar, Syringe, Scissors, Palette, Ruler, Phone,
+  Store, User as UserIcon, AlertCircle, CheckCircle2, X, Send,
+  ChevronLeft, PawPrint, Mars, Venus, Home,
+} from 'lucide-react';
+import { petApi, adoptionApi } from '../../services/endpoints';
+import { getError } from '../../services/api';
+import { useAuth } from '../context/AuthContext';
+import { useWishlist } from '../context/WishlistContext';
+import AuthModal from '../components/AuthModal';
+import {
+  ADOPTION_STATUS_TEXT, ADOPTION_STATUS_COLOR,
+  PET_SIZE_TEXT, PLACEHOLDER_PET,
+} from '../../utils/constants';
 
-// React Icons
-import { 
-  FiArrowLeft, FiHeart, FiMapPin, FiPhone, FiMail, 
-  FiInstagram, FiShare2, FiTag, FiShield, FiClock, 
-  FiCheck, FiExternalLink, FiInfo, FiAlertCircle, FiSend, FiX 
-} from 'react-icons/fi';
-import { FaWhatsapp } from 'react-icons/fa';
+const HOUSING_TYPES = ['Mənzil', 'Həyət evi', 'Ev'];
 
 const PetDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isInWishlist, toggleWishlist } = useWishlist();
 
   const [pet, setPet] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+  const [activeImg, setActiveImg] = useState(0);
+  const [authModal, setAuthModal] = useState(false);
 
-  // Adoption Modal State-ləri
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: '',
-    phone: '',
-    address: '',
-    housingType: 'Ev',
-    reason: ''
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    fullName: '', phone: '', address: '',
+    housingType: 'Mənzil', hasOtherPets: false, reason: '',
   });
   const [submitting, setSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
+  const [formError, setFormError] = useState('');
+  const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
+  const fetchPet = useCallback(async () => {
     setLoading(true);
-    setError(null);
-
-    axios.get(`http://localhost:5123/api/Animals/${id}`)
-      .then(res => {
-        setPet(res.data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Məlumat yüklənərkən xəta:", err);
-        setError("Elan tapılmadı və ya serverlə əlaqə kəsildi.");
-        setLoading(false);
-      });
+    try {
+      const res = await petApi.byId(id);
+      if (res?.success && res.data) setPet(res.data);
+      else setNotFound(true);
+    } catch (e) {
+      e?.response?.status === 404 ? setNotFound(true) : console.error(e);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  useEffect(() => { fetchPet(); }, [fetchPet]);
+
+  /* Heyvan dəyişəndə şəkli sıfırla */
+  useEffect(() => { setActiveImg(0); }, [id]);
+
+  useEffect(() => {
+    if (user) setForm((f) => ({ ...f, fullName: f.fullName || user.fullName || '' }));
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 py-10 px-4">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8">
+          <div className="h-[420px] bg-white rounded-3xl animate-pulse" />
+          <div className="space-y-4">
+            <div className="h-10 bg-white rounded-2xl animate-pulse" />
+            <div className="h-6 w-1/2 bg-white rounded-2xl animate-pulse" />
+            <div className="h-40 bg-white rounded-2xl animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (notFound || !pet) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center max-w-md space-y-4">
+          <div className="w-16 h-16 bg-slate-100 rounded-full grid place-items-center mx-auto text-slate-400">
+            <PawPrint size={30} />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900">Elan tapılmadı</h2>
+          <p className="text-sm text-slate-500">Bu elan silinmiş və ya mövcud deyil.</p>
+          <Link to="/adopt" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-3 rounded-xl transition">
+            <ChevronLeft size={16} /> Elanlara qayıt
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  /* ✅ DÜZƏLİŞ: həm images (object), həm imageUrls (string) tutur */
+  const imgs = (pet.images || pet.imageUrls || []).map((i) => i.imageUrl || i).filter(Boolean);
+  const mainImg = pet.mainImageUrl || pet.imageUrl || imgs[0] || PLACEHOLDER_PET;
+  const gallery = imgs.length ? [mainImg, ...imgs.filter((u) => u !== mainImg)] : [mainImg];
+
+  const liked = isInWishlist(pet.id);
+  const available = pet.adoptionStatus === 1;
+
+  const handleWishlist = async () => {
+    if (!user) return setAuthModal(true);
+    await toggleWishlist(pet.id);
   };
 
-  const toggleFavorite = () => {
-    setIsFavorite(prev => !prev);
+  const openForm = () => {
+    if (!user) return setAuthModal(true);
+    setSuccess(false); setFormError(''); setShowForm(true);
   };
 
-  // Müraciət formasının göndərilməsi
-  const handleAdoptSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
+    if (!form.fullName.trim() || !form.phone.trim() || !form.reason.trim()) {
+      return setFormError('Ad, telefon və müraciət səbəbi mütləq doldurulmalıdır.');
+    }
     setSubmitting(true);
     try {
-      // Backend-də yaradacağın AdoptionRequests API endpoint-i
-      await axios.post('http://localhost:5123/api/AdoptionRequests', {
-        petId: parseInt(id),
-        userId: 1, // Əgər Auth sistemin varsa buraya daxil olan istifadəçinin ID-si gəlir
-        fullName: formData.fullName,
-        phone: formData.phone,
-        address: formData.address,
-        housingType: formData.housingType,
-        reason: formData.reason
-      });
-      
-      setSuccessMessage("Müraciətiniz uğurla göndərildi! Tezliklə sizinlə əlaqə saxlanılacaq.");
-      setTimeout(() => {
-        setIsModalOpen(false);
-        setSuccessMessage('');
-        setFormData({ fullName: '', phone: '', address: '', housingType: 'Ev', reason: '' });
-      }, 3000);
+      const res = await adoptionApi.create({ petId: pet.id, ...form });
+      if (res?.success) {
+        setSuccess(true);
+        setShowForm(false);
+        fetchPet();
+      } else setFormError(res?.message || 'Müraciət göndərilmədi.');
     } catch (err) {
-      console.error("Müraciət göndərilərkən xəta:", err);
-      alert("Xəta baş verdi. Zəhmət olmasa yenidən cəhd edin.");
+      setFormError(getError(err, 'Müraciət göndərilmədi.'));
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-200 border-t-indigo-600 mb-4"></div>
-        <p className="text-sm font-semibold animate-pulse">Məlumatlar yüklənir...</p>
-      </div>
-    );
-  }
+  const chips = [
+    { icon: Calendar, label: 'Yaş', value: pet.ageText },
+    { icon: pet.gender === 2 ? Venus : Mars, label: 'Cinsiyyət', value: pet.genderText },
+    { icon: Ruler, label: 'Ölçü', value: PET_SIZE_TEXT[pet.size] || pet.sizeText || '-' },
+    { icon: Palette, label: 'Rəng', value: pet.color || '-' },
+    { icon: Syringe, label: 'Peyvənd', value: pet.isVaccinated ? 'Vurulub ✅' : 'Yoxdur' },
+    { icon: Scissors, label: 'Sterilizasiya', value: pet.isNeutered ? 'Olunub ✅' : 'Yoxdur' },
+  ];
 
-  if (error || !pet) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-center p-4">
-        <div className="bg-rose-50 text-rose-500 p-4 rounded-full mb-3">
-          <FiAlertCircle size={32} />
-        </div>
-        <h2 className="text-xl font-bold text-slate-800">Xəta Baş Verdi</h2>
-        <p className="text-slate-500 text-sm mt-1 max-w-md">{error}</p>
-        <button 
-          onClick={() => navigate('/adopt')} 
-          className="mt-5 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-200"
-        >
-          Bütün Elanlara Qayıt
-        </button>
-      </div>
-    );
-  }
-
-  const mapUrl = pet.latitude && pet.longitude 
-    ? `https://www.google.com/maps?q=${pet.latitude},${pet.longitude}`
-    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pet.petShopAddress || pet.location)}`;
+  const inputCls = 'w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition';
 
   return (
-    <div className="min-h-screen bg-slate-50/70 py-6 sm:py-10 px-4 sm:px-6 lg:px-8 relative">
-      <div className="max-w-5xl mx-auto space-y-6">
-        
-        {/* Üst Naviqasiya & Düymələr */}
-        <div className="flex items-center justify-between">
-          <button 
-            onClick={() => navigate(-1)} 
-            className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-indigo-600 bg-white border border-slate-200/80 px-3.5 py-2 rounded-xl transition-all shadow-sm hover:shadow"
-          >
-            <FiArrowLeft size={16} /> Geri
-          </button>
+    <div className="min-h-screen bg-slate-50 text-slate-800 antialiased pb-16">
+      <AuthModal isOpen={authModal} onClose={() => setAuthModal(false)} />
 
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={handleShare}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200/80 px-3.5 py-2 rounded-xl hover:bg-slate-50 transition-all shadow-sm"
-            >
-              {copied ? <FiCheck size={16} className="text-emerald-600" /> : <FiShare2 size={16} />}
-              <span className="hidden sm:inline">{copied ? "Kopyalandı!" : "Paylaş"}</span>
-            </button>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <Link to="/adopt" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 transition mb-6">
+          <ChevronLeft size={16} /> Elanlara qayıt
+        </Link>
 
-            <button 
-              onClick={toggleFavorite}
-              className={`p-2.5 rounded-xl border transition-all shadow-sm ${
-                isFavorite 
-                  ? 'bg-rose-50 border-rose-200 text-rose-500' 
-                  : 'bg-white border-slate-200/80 text-slate-400 hover:text-rose-500'
-              }`}
-            >
-              <FiHeart size={16} className={isFavorite ? 'fill-rose-500' : ''} />
-            </button>
+        {success && (
+          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-sm font-semibold flex items-center gap-3">
+            <CheckCircle2 size={20} className="shrink-0" />
+            <span>Müraciətiniz göndərildi! Nəticəni <Link to="/my-requests" className="underline font-bold">Müraciətlərim</Link> bölməsindən izləyə bilərsiniz.</span>
           </div>
-        </div>
+        )}
 
-        {/* ƏSAS KART / ŞƏKİL VƏ İNFO */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-7 shadow-sm grid lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Sol: Şəkil */}
-          <div className="lg:col-span-6 space-y-3">
-            <div className="relative rounded-2xl overflow-hidden bg-slate-100 aspect-[4/3] border border-slate-100">
-              <img 
-                src={pet.imageUrl || '/placeholder-pet.jpg'} 
-                alt={pet.name} 
-                className="w-full h-full object-cover"
-              />
-              
-              <div className="absolute top-3 left-3 flex flex-wrap gap-2">
-                <span className={`text-[11px] font-extrabold px-3 py-1 rounded-lg text-white uppercase tracking-wider shadow-sm ${
-                  pet.isUrgent ? 'bg-rose-500' : 'bg-indigo-600'
-                }`}>
-                  {pet.isUrgent ? 'Təcili' : 'Aktiv'}
+        <div className="grid lg:grid-cols-2 gap-8 items-start">
+          {/* QALEREYA */}
+          <div className="space-y-3">
+            <div className="relative bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-sm">
+              <img src={gallery[activeImg] || PLACEHOLDER_PET} alt={pet.name}
+                className="w-full h-[340px] sm:h-[440px] object-cover" />
+              <div className="absolute top-4 left-4 flex gap-2">
+                <span className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border ${ADOPTION_STATUS_COLOR[pet.adoptionStatus]}`}>
+                  {ADOPTION_STATUS_TEXT[pet.adoptionStatus]}
                 </span>
-
-                {pet.isAdopted && (
-                  <span className="text-[11px] font-extrabold px-3 py-1 rounded-lg bg-emerald-600 text-white uppercase tracking-wider shadow-sm">
-                    Sahibləndirildi
+                {pet.isUrgent && (
+                  <span className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-rose-500 text-white flex items-center gap-1">
+                    <AlertCircle size={12} /> Təcili
                   </span>
                 )}
               </div>
-            </div>
-          </div>
-
-          {/* Sağ: Məlumat Paneli */}
-          <div className="lg:col-span-6 space-y-6">
-            
-            <div>
-              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md mb-2">
-                <FiTag size={12} />
-                <span>{pet.categoryName}</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">{pet.name}</h1>
-              <p className="text-xs sm:text-sm font-semibold text-slate-400 mt-1">
-                {pet.breed} • {pet.gender}
-              </p>
-            </div>
-
-            {/* Özəlliklər */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              <div className="bg-slate-50 border border-slate-100 p-3 rounded-2xl">
-                <p className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Yaş</p>
-                <p className="text-xs sm:text-sm font-bold text-slate-800 mt-0.5">{pet.ageText}</p>
-              </div>
-              
-              <div className="bg-slate-50 border border-slate-100 p-3 rounded-2xl">
-                <p className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Cinsiyyət</p>
-                <p className="text-xs sm:text-sm font-bold text-slate-800 mt-0.5">{pet.gender}</p>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-100 p-3 rounded-2xl col-span-2 sm:col-span-1">
-                <p className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Məkan</p>
-                <p className="text-xs sm:text-sm font-bold text-slate-800 mt-0.5 truncate">{pet.location}</p>
-              </div>
-            </div>
-
-            {/* Tarix */}
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 pt-1">
-              <FiClock size={14} />
-              <span>Elan tarixi: {pet.dateText}</span>
-            </div>
-
-            {/* Əlaqə və Övladlığa Götürmə Düymələri */}
-            <div className="space-y-3 pt-2 border-t border-slate-100">
-              
-              {/* Yeni Övladlığa Götürmə Müraciət Düyməsi */}
-              <button 
-                onClick={() => setIsModalOpen(true)}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
-              >
-                <FiHeart size={16} /> Övladlığa Götürmək Üçün Müraciət Et
+              <button onClick={handleWishlist}
+                className={`absolute top-4 right-4 p-3 rounded-xl shadow-md border transition ${
+                  liked ? 'bg-rose-50 text-rose-500 border-rose-200' : 'bg-white/90 text-slate-400 hover:text-rose-500 border-slate-100'
+                }`}>
+                <Heart size={20} fill={liked ? 'currentColor' : 'none'} />
               </button>
-
-              {pet.petShopPhone ? (
-                <div className="flex flex-col sm:flex-row gap-2.5">
-                  <a 
-                    href={`tel:${pet.petShopPhone}`}
-                    className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-md"
-                  >
-                    <FiPhone size={15} /> Zəng Et
-                  </a>
-                  
-                  <a 
-                    href={`https://wa.me/${pet.petShopPhone.replace(/[^0-9]/g, '')}`} 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-200"
-                  >
-                    <FaWhatsapp size={16} /> WhatsApp
-                  </a>
-                </div>
-              ) : null}
             </div>
 
-          </div>
-        </div>
-
-        {/* PETSHOP / SIĞINACAQ & ÜNVAN KARTU */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-7 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <FiShield className="text-indigo-600" size={18} /> Sahibləndirən Qurum / PetShop
-            </h3>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-slate-50/70 border border-slate-100 rounded-2xl">
-            <div className="flex items-center gap-3.5">
-              <img 
-                src={pet.petShopLogo || '/placeholder-logo.png'} 
-                alt={pet.petShopName} 
-                className="w-12 h-12 rounded-xl object-cover bg-white border border-slate-200 shadow-sm"
-              />
-              <div>
-                <h4 className="font-bold text-slate-800 text-sm">{pet.petShopName}</h4>
-                <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                  <FiMapPin size={13} className="text-slate-400" /> {pet.petShopAddress || 'Ünvan qeyd olunmayıb'}
-                </p>
+            {gallery.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {gallery.map((img, i) => (
+                  <button key={i} onClick={() => setActiveImg(i)}
+                    className={`shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition ${
+                      i === activeImg ? 'border-blue-600 ring-2 ring-blue-200' : 'border-transparent opacity-70 hover:opacity-100'
+                    }`}>
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
               </div>
-            </div>
-
-            <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-0 border-slate-200">
-              {pet.petShopInstagram && (
-                <a 
-                  href={`https://instagram.com/${pet.petShopInstagram.replace('@', '')}`} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-pink-600 hover:border-pink-200 transition-all shadow-sm"
-                >
-                  <FiInstagram size={16} />
-                </a>
-              )}
-
-              {pet.petShopEmail && (
-                <a 
-                  href={`mailto:${pet.petShopEmail}`}
-                  className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm"
-                >
-                  <FiMail size={16} />
-                </a>
-              )}
-
-              <a 
-                href={mapUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition-all shadow-sm"
-              >
-                <FiExternalLink size={14} /> Xəritədə Bax
-              </a>
-            </div>
+            )}
           </div>
-        </div>
 
-      </div>
-
-      {/* ÖVLADLIĞA GÖTÜRMƏ MÜRACİƏT MODALI */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative space-y-5 animate-in fade-in zoom-in duration-200">
-            <button 
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all"
-            >
-              <FiX size={18} />
-            </button>
-
+          {/* MƏLUMAT */}
+          <div className="space-y-6">
             <div>
-              <h3 className="text-xl font-extrabold text-slate-900">Övladlığa Götürmə Müraciəti</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                <span className="font-bold text-indigo-600">{pet.name}</span> üçün müraciət formasını doldurun.
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h1 className="text-3xl sm:text-4xl font-black text-slate-900">{pet.name}</h1>
+                  <p className="text-sm text-slate-500 font-semibold mt-1">{pet.breed} • {pet.categoryName}</p>
+                </div>
+                <span className="text-3xl">{pet.gender === 2 ? '🐾' : '🐾'}</span>
+              </div>
+              <div className="flex items-center gap-4 mt-3 text-xs text-slate-500 font-semibold">
+                <span className="flex items-center gap-1"><MapPin size={14} className="text-blue-500" /> {pet.city}</span>
+                {pet.dateText && <span className="flex items-center gap-1"><Calendar size={14} /> {pet.dateText}</span>}
+              </div>
             </div>
 
-            {successMessage ? (
-              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-2xl text-xs font-bold text-center space-y-2">
-                <FiCheck size={24} className="mx-auto text-emerald-600" />
-                <p>{successMessage}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {chips.map(({ icon: Icon, label, value }) => (
+                <div key={label} className="bg-white border border-slate-200 rounded-2xl p-3">
+                  <Icon size={16} className="text-blue-500 mb-1.5" />
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+                  <p className="text-xs font-bold text-slate-800 mt-0.5">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+              <h3 className="text-sm font-bold text-slate-900">Haqqında</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">{pet.description}</p>
+              {pet.healthNotes && (
+                <p className="text-xs text-teal-700 bg-teal-50 border border-teal-100 rounded-xl px-3 py-2">
+                   {pet.healthNotes}
+                </p>
+              )}
+              {pet.reasonToGiveAway && (
+                <p className="text-xs text-slate-500 bg-slate-50 rounded-xl px-3 py-2">
+                  <span className="font-bold">Səbəb:</span> {pet.reasonToGiveAway}
+                </p>
+              )}
+            </div>
+
+            {/* SAHİB */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                  {pet.ownerType === 1 ? <Store size={20} /> : <UserIcon size={20} />}
+                </div>
+                <div>
+                  {/* ✅ petShopName əlavə olundu (DTO-dakı real ad) */}
+                  <p className="text-sm font-bold text-slate-900">
+                    {pet.petShopName || pet.shopName || pet.ownerFullName || (pet.ownerType === 1 ? 'Mağaza' : 'Şəxsi elan')}
+                  </p>
+                  <p className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                    <Phone size={11} /> {pet.contactPhone}
+                  </p>
+                </div>
               </div>
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500">
+                {pet.ownerType === 1 ? '🏪 Mağaza' : '👤 Şəxsi'}
+              </span>
+            </div>
+
+            {/* MÜRACİƏT */}
+            {available ? (
+              <button onClick={openForm}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl text-sm transition shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2">
+                <Send size={17} /> Sahiblənmək üçün müraciət et
+              </button>
             ) : (
-              <form onSubmit={handleAdoptSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Ad və Soyad</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={formData.fullName}
-                    onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                    placeholder="Məs: Əli Məmmədov"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-600 transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Əlaqə Nömrəsi</label>
-                  <input 
-                    type="tel" 
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    placeholder="+994 50 123 45 67"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-600 transition-all"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Yaşayış Növü</label>
-                    <select 
-                      value={formData.housingType}
-                      onChange={(e) => setFormData({...formData, housingType: e.target.value})}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-600 transition-all"
-                    >
-                      <option value="Ev">Ev (Şəxsi)</option>
-                      <option value="Kirayə">Kirayə Ev</option>
-                      <option value="Həyət evi">Həyət Evi</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Şəhər / Ünvan</label>
-                    <input 
-                      type="text" 
-                      required
-                      value={formData.address}
-                      onChange={(e) => setFormData({...formData, address: e.target.value})}
-                      placeholder="Bakı ş."
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-600 transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Niyə bu heyvanı istəyirsiniz?</label>
-                  <textarea 
-                    rows="3"
-                    required
-                    value={formData.reason}
-                    onChange={(e) => setFormData({...formData, reason: e.target.value})}
-                    placeholder="Qısa məlumat yazın..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-600 transition-all resize-none"
-                  ></textarea>
-                </div>
-
-                <button 
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 disabled:opacity-50"
-                >
-                  <FiSend size={15} /> {submitting ? 'Göndərilir...' : 'Müraciəti Təsdiq Et'}
-                </button>
-              </form>
+              <div className="w-full bg-slate-100 text-slate-500 font-bold py-4 rounded-2xl text-sm text-center">
+                {ADOPTION_STATUS_TEXT[pet.adoptionStatus]} — müraciət bağlanıb
+              </div>
             )}
           </div>
         </div>
-      )}
+      </div>
 
+      {/* MÜRACİƏT MODALI */}
+      {showForm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" onClick={() => setShowForm(false)}>
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setShowForm(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-xl">
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl"><Home size={22} /></div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">{pet.name} üçün müraciət</h3>
+                <p className="text-[11px] text-slate-400">Elan sahibi sizinlə əlaqə saxlayacaq</p>
+              </div>
+            </div>
+
+            {formError && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-semibold flex items-start gap-2">
+                <AlertCircle size={15} className="shrink-0 mt-0.5" /> {formError}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Ad Soyad *</label>
+                  <input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Telefon *</label>
+                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="0501234567" className={inputCls} />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Ünvan</label>
+                <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className={inputCls} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 items-end">
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Yaşayış növü</label>
+                  <select value={form.housingType} onChange={(e) => setForm({ ...form, housingType: e.target.value })} className={inputCls + ' cursor-pointer'}>
+                    {HOUSING_TYPES.map((h) => <option key={h}>{h}</option>)}
+                  </select>
+                </div>
+                <label className="flex items-center gap-2 pb-2.5 cursor-pointer">
+                  <input type="checkbox" checked={form.hasOtherPets}
+                    onChange={(e) => setForm({ ...form, hasOtherPets: e.target.checked })}
+                    className="w-4 h-4 rounded accent-blue-600" />
+                  <span className="text-xs font-semibold text-slate-600">Başqa heyvanım var</span>
+                </label>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Niyə sahiblənmək istəyirsiz? *</label>
+                <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                  rows={3} className={inputCls + ' resize-none'} placeholder="Şəraitiniz, təcrübəniz haqqında qısa yazın..." />
+              </div>
+
+              <button type="submit" disabled={submitting}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl text-sm transition flex items-center justify-center gap-2 disabled:opacity-50">
+                {submitting ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /> : <><Send size={16} /> Göndər</>}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
