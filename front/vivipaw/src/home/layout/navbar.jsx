@@ -170,6 +170,7 @@ const Navbar = () => {
 
                       {[
                         panel,
+                        { to: '/my-pets', label: 'Elanlarım', icon: LuPawPrint },
                         { to: '/profile', label: 'Profilim', icon: LuUser },
                         { to: '/my-orders', label: 'Sifarişlərim', icon: LuPackage },
                         { to: '/my-requests', label: 'Müraciətlərim', icon: LuFileText },

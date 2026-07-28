@@ -19,17 +19,18 @@ import MyOrders from '../home/pages/myorders';
 import MyRequests from '../home/pages/myrequests';
 import Notifications from '../home/pages/notifications';
 import Testimonials from '../home/pages/testimonials';
+import MyPets from '../home/pages/mypets';
 
 /* ── Admin panel ── */
 import AdminLayout from '../home/pages/admin/AdminLayout';
 import Dashboard from '../home/pages/admin/Dashboard';
 import AdminUsers from '../home/pages/admin/AdminUsers';
-// Növbəti mərhələdə bu import-ları aç:
-// import AdminShops from '../home/pages/admin/AdminShops';
-// import AdminVets from '../home/pages/admin/AdminVets';
-// import AdminPets from '../home/pages/admin/AdminPets';
-// import AdminTestimonials from '../home/pages/admin/AdminTestimonials';
-// import AdminOrders from '../home/pages/admin/AdminOrders';
+
+import AdminShops from '../home/pages/admin/AdminShops';
+import AdminVets from '../home/pages/admin/AdminVets';
+import AdminPets from '../home/pages/admin/AdminPets';
+import AdminTestimonials from '../home/pages/admin/AdminTestimonials';
+import AdminOrders from '../home/pages/admin/AdminOrders';
 
 export const router = createBrowserRouter([
   /* ── ƏSAS SAYT (home layout) ── */
@@ -56,6 +57,7 @@ export const router = createBrowserRouter([
       { element: <ProtectedRoute><MyOrders /></ProtectedRoute>, path: 'my-orders' },
       { element: <ProtectedRoute><MyRequests /></ProtectedRoute>, path: 'my-requests' },
       { element: <ProtectedRoute><Notifications /></ProtectedRoute>, path: 'notifications' },
+      { element: <ProtectedRoute><MyPets /></ProtectedRoute>, path: 'my-pets' },
     ],
   },
 
@@ -70,12 +72,12 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: 'users', element: <AdminUsers /> },
-      // Növbəti mərhələdə bunları aç:
-      // { path: 'shops', element: <AdminShops /> },
-      // { path: 'vets', element: <AdminVets /> },
-      // { path: 'pets', element: <AdminPets /> },
-      // { path: 'testimonials', element: <AdminTestimonials /> },
-      // { path: 'orders', element: <AdminOrders /> },
+     
+      { path: 'shops', element: <AdminShops /> },
+      { path: 'vets', element: <AdminVets /> },
+      { path: 'pets', element: <AdminPets /> },
+      { path: 'testimonials', element: <AdminTestimonials /> },
+      { path: 'orders', element: <AdminOrders /> },
     ],
   },
 ]);

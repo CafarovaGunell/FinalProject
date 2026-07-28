@@ -10,8 +10,7 @@ export const listFrom = (res) => {
   return [];
 };
 
-/* Təsdiq gövdəsi — DTO variantlarından asılı olmayaraq işləyir
-   (artıq sahələr ASP.NET tərəfindən ignore olunur) */
+/* Təsdiq gövdəsi — DTO variantlarından asılı olmayaraq işləyir */
 export const approveBody = (approve, reason = '') => ({
   approve,
   isApproved: approve,
@@ -57,19 +56,21 @@ export const Badge = ({ className = '', children }) => (
   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border whitespace-nowrap ${className}`}>{children}</span>
 );
 
+/* ✅ DÜZƏLİŞ: LuInbox istifadə olunur */
 export const EmptyBox = ({ text = 'Məlumat tapılmadı.' }) => (
   <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center">
-    <Inbox className="mx-auto text-slate-300 mb-2" size={36} />
+    <LuInbox className="mx-auto text-slate-300 mb-2" size={36} />
     <p className="text-sm text-slate-500 font-semibold">{text}</p>
   </div>
 );
 
+/* ✅ DÜZƏLİŞ: LuX istifadə olunur */
 export const Modal = ({ open, onClose, title, children }) => {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-xl"><X size={16} /></button>
+        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-xl"><LuX size={16} /></button>
         <h3 className="text-lg font-bold text-slate-900 mb-4 pr-8">{title}</h3>
         {children}
       </div>

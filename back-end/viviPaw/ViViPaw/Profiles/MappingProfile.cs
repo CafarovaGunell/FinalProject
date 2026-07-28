@@ -1,4 +1,4 @@
-﻿// Profiles/MappingProfile.cs
+﻿
 using AutoMapper;
 using ViViPaw.DTOs.Adoption;
 using ViViPaw.DTOs.Article;
@@ -118,7 +118,7 @@ public class MappingProfile : Profile
         CreateMap<PetShopCreateDto, PetShop>();
         CreateMap<PetShopUpdateDto, PetShop>();
 
-        // -------- ProductImage --------   ✅ BU SƏTRİ ƏLAVƏ ET
+   
         CreateMap<ProductImage, ProductImageDto>();
 
         // -------- Product --------

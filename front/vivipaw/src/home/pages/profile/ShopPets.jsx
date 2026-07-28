@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  PawPrint, Plus, Pencil, Trash2, X, ImagePlus, AlertCircle, Save,
+  Plus, Pencil, Trash2, X, ImagePlus, AlertCircle, Save,
 } from 'lucide-react';
 import { petApi, categoryApi, uploadApi } from '../../../services/endpoints';
 import { getError } from '../../../services/api';
@@ -16,22 +16,67 @@ const EMPTY = {
   reasonToGiveAway: '', isUrgent: false, imageUrls: [],
 };
 
+/* Siyahı obyektindən sürətli ilkin doldurma */
+const fromList = (p, categories) => ({
+  ...EMPTY,
+  name: p.name || '', breed: p.breed || '', gender: p.gender || 1,
+  ageInMonths: p.ageInMonths ?? '', size: p.size || 2, color: p.color || '',
+  description: p.description || '', isVaccinated: !!p.isVaccinated,
+  isNeutered: !!p.isNeutered, healthNotes: p.healthNotes || '',
+  categoryId: p.categoryId ? String(p.categoryId)
+    : (categories.find((c) => c.name === p.categoryName)?.id ? String(categories.find((c) => c.name === p.categoryName).id) : ''),
+  city: p.city || 'Bakı', address: p.address || '',
+  contactPhone: p.contactPhone || '', reasonToGiveAway: p.reasonToGiveAway || '',
+  isUrgent: !!p.isUrgent,
+  imageUrls: p.imageUrls || (p.mainImageUrl ? [p.mainImageUrl] : []),
+});
+
 /* ═══════════ FORM MODALI ═══════════ */
 const PetModal = ({ pet, categories, onClose, onDone, showToast }) => {
-  const [form, setForm] = useState(pet ? {
-    ...EMPTY,
-    name: pet.name || '', breed: pet.breed || '', gender: pet.gender || 1,
-    ageInMonths: pet.ageInMonths ?? '', size: pet.size || 2, color: pet.color || '',
-    description: pet.description || '', isVaccinated: !!pet.isVaccinated,
-    isNeutered: !!pet.isNeutered, healthNotes: pet.healthNotes || '',
-    categoryId: pet.categoryId || '', city: pet.city || 'Bakı', address: pet.address || '',
-    contactPhone: pet.contactPhone || '', reasonToGiveAway: pet.reasonToGiveAway || '',
-    isUrgent: !!pet.isUrgent,
-    imageUrls: (pet.images || []).map((i) => i.imageUrl || i).filter(Boolean),
-  } : EMPTY);
+  const [form, setForm] = useState(pet ? fromList(pet, categories) : EMPTY);
+  const [loadingDetail, setLoadingDetail] = useState(!!pet);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+
+  /* ✅ REDAKTƏ: detail-dən TAM məlumatı çək, bütün sahələri doldur */
+  useEffect(() => {
+    if (!pet) return;
+    let alive = true;
+    setLoadingDetail(true);
+    petApi.byId(pet.id)
+      .then((res) => {
+        if (!alive || !res?.success || !res.data) return;
+        const d = res.data;
+        const catId = d.categoryId
+          ? String(d.categoryId)
+          : (categories.find((c) => c.name === (d.categoryName || pet.categoryName))?.id
+            ? String(categories.find((c) => c.name === (d.categoryName || pet.categoryName)).id)
+            : '');
+        setForm({
+          name: d.name ?? '',
+          breed: d.breed ?? '',
+          gender: d.gender ?? 1,
+          ageInMonths: d.ageInMonths ?? '',
+          size: d.size ?? 2,
+          color: d.color ?? '',
+          description: d.description ?? '',
+          isVaccinated: !!d.isVaccinated,
+          isNeutered: !!d.isNeutered,
+          healthNotes: d.healthNotes ?? '',
+          categoryId: catId,
+          city: d.city || 'Bakı',
+          address: d.address ?? '',
+          contactPhone: d.contactPhone ?? '',
+          reasonToGiveAway: d.reasonToGiveAway ?? '',
+          isUrgent: !!d.isUrgent,
+          imageUrls: d.imageUrls || (d.mainImageUrl ? [d.mainImageUrl] : []),
+        });
+      })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoadingDetail(false); });
+    return () => { alive = false; };
+  }, [pet?.id, categories]);
 
   const onFiles = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -50,9 +95,15 @@ const PetModal = ({ pet, categories, onClose, onDone, showToast }) => {
     e.preventDefault();
     setErr('');
     if (!form.name.trim() || !form.breed.trim() || !form.categoryId) return setErr('Ad, cins və kateqoriya mütləqdir.');
-    if (!form.ageInMonths) return setErr('Yaş (ayla) daxil edin.');
+    if (!form.ageInMonths && form.ageInMonths !== 0) return setErr('Yaş (ayla) daxil edin.');
     setSaving(true);
-    const payload = { ...form, ageInMonths: Number(form.ageInMonths), gender: Number(form.gender), size: Number(form.size), categoryId: Number(form.categoryId) };
+    const payload = {
+      ...form,
+      ageInMonths: Number(form.ageInMonths),
+      gender: Number(form.gender),
+      size: Number(form.size),
+      categoryId: Number(form.categoryId),
+    };
     try {
       const res = pet ? await petApi.update(pet.id, payload) : await petApi.create(payload);
       if (res?.success) onDone();
@@ -65,7 +116,10 @@ const PetModal = ({ pet, categories, onClose, onDone, showToast }) => {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-xl"><X size={18} /></button>
-        <h3 className="text-lg font-bold text-slate-900 mb-4">{pet ? 'Elanı redaktə et' : 'Yeni heyvan elanı'}</h3>
+        <h3 className="text-lg font-bold text-slate-900 mb-4">
+          {pet ? 'Elanı redaktə et' : 'Yeni heyvan elanı'}
+          {loadingDetail && <span className="ml-2 text-xs text-sky-500 font-semibold">məlumatlar yüklənir...</span>}
+        </h3>
 
         {err && <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-semibold flex items-start gap-2"><AlertCircle size={15} className="shrink-0 mt-0.5" /> {err}</div>}
 
@@ -78,7 +132,7 @@ const PetModal = ({ pet, categories, onClose, onDone, showToast }) => {
             <div className="space-y-1"><label className={labelCls}>Kateqoriya *</label>
               <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })} className={inputCls + ' cursor-pointer'}>
                 <option value="">Seçin...</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {categories.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
               </select></div>
             <div className="space-y-1"><label className={labelCls}>Yaş (ay) *</label>
               <input type="number" min="0" value={form.ageInMonths} onChange={(e) => setForm({ ...form, ageInMonths: e.target.value })} className={inputCls} /></div>
@@ -140,7 +194,7 @@ const PetModal = ({ pet, categories, onClose, onDone, showToast }) => {
             </div>
           </div>
 
-          <button type="submit" disabled={saving || uploading}
+          <button type="submit" disabled={saving || uploading || loadingDetail}
             className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center gap-2 disabled:opacity-50">
             {saving ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /> : <><Save size={16} /> {pet ? 'Yenilə' : 'Elan yarat'}</>}
           </button>
@@ -156,7 +210,7 @@ const ShopPets = ({ showToast }) => {
   const [pets, setPets] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null);   // null | { pet } | { pet: null }
+  const [modal, setModal] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [acting, setActing] = useState(null);
 

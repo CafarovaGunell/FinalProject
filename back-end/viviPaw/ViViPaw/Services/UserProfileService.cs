@@ -69,32 +69,56 @@ public class UserProfileService : IUserProfileService
 
     public async Task<ApiResponse<List<UserGetDto>>> GetAllAsync(string? role, string? search)
     {
-        var q = _db.Users.Include(x => x.SocialMediaLinks).AsQueryable();
+        // 1) Rol adını ID-yə çevir (DbSet ilə — navigation adından asılı deyil)
+        var roleId = 0;
+        if (!string.IsNullOrWhiteSpace(role))
+        {
+            roleId = await _db.Roles
+                .Where(r => r.Name == role)
+                .Select(r => r.Id)
+                .FirstOrDefaultAsync();
+
+            if (roleId == 0)
+                return ApiResponse<List<UserGetDto>>.Ok(new List<UserGetDto>());
+        }
+
+        // 2) Əsas sorğu
+        var q = _db.Users.AsQueryable();
+
+        if (roleId != 0)
+            q = q.Where(u => _db.UserRoles.Any(ur => ur.UserId == u.Id && ur.RoleId == roleId));
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim().ToLower();
-            q = q.Where(x => x.FullName.ToLower().Contains(s) || x.Email!.ToLower().Contains(s));
+            q = q.Where(u =>
+                (u.FullName != null && u.FullName.ToLower().Contains(s)) ||
+                (u.Email != null && u.Email.ToLower().Contains(s)) ||
+                (u.UserName != null && u.UserName.ToLower().Contains(s)));
         }
 
-        if (!string.IsNullOrWhiteSpace(role))
-        {
-            var roleId = await _db.Roles.Where(r => r.Name == role).Select(r => r.Id).FirstOrDefaultAsync();
-            var userIds = await _db.UserRoles.Where(ur => ur.RoleId == roleId).Select(ur => ur.UserId).ToListAsync();
-            q = q.Where(x => userIds.Contains(x.Id));
-        }
+        var users = await q.OrderBy(u => u.Id).ToListAsync();
 
-        var users = await q.OrderByDescending(x => x.CreatedAt).Take(500).ToListAsync();
+        // 3) Rolları ayrıca doldur (mapping-də Ignore olunduğu üçün)
+        var userIds = users.Select(u => u.Id).ToList();
 
-        var list = new List<UserGetDto>();
-        foreach (var u in users)
+        var roleMap = await (
+            from ur in _db.UserRoles
+            join r in _db.Roles on ur.RoleId equals r.Id
+            where userIds.Contains(ur.UserId)
+            select new { ur.UserId, RoleName = r.Name! }
+        )
+        .GroupBy(x => x.UserId)
+        .ToDictionaryAsync(g => g.Key, g => g.Select(x => x.RoleName).ToList());
+
+        var dtos = users.Select(u =>
         {
             var dto = _mapper.Map<UserGetDto>(u);
-            dto.Roles = (await _userManager.GetRolesAsync(u)).ToList();
-            list.Add(dto);
-        }
+            dto.Roles = roleMap.TryGetValue(u.Id, out var rs) ? rs : new List<string>();
+            return dto;
+        }).ToList();
 
-        return ApiResponse<List<UserGetDto>>.Ok(list);
+        return ApiResponse<List<UserGetDto>>.Ok(dtos);
     }
 
     public async Task<ApiResponse<string>> SetActiveAsync(int userId, bool isActive)
