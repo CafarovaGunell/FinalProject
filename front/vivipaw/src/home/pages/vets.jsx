@@ -1,26 +1,26 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Stethoscope, MapPin, Phone, Clock, Award, Search, X,
-  CheckCircle2, AlertCircle, PawPrint, Sparkles, Calendar,
-} from 'lucide-react';
-import { vetApi, appointmentApi, petApi } from '../../services/endpoints';
+  FiActivity, FiMapPin, FiPhone, FiClock, FiAward, FiSearch, FiX,
+  FiCheckCircle, FiAlertCircle, FiStar, FiCalendar,
+} from 'react-icons/fi';
+import { vetApi, appointmentApi, categoryApi } from '../../services/endpoints';
 import { getError } from '../../services/api';
 import { useAuth } from '../context/AuthContext';
 import AuthModal from '../components/AuthModal';
-import { CITIES, DAY_NAMES } from '../../utils/constants';
+import { CITIES, DAY_NAMES, CATEGORY_TYPE } from '../../utils/constants';
 import { formatPrice, toDateInput } from '../../utils/helpers';
 
 /* ═══════════ RANDEVU MODALI ═══════════ */
 const BookingModal = ({ vet, onClose }) => {
   const { user } = useAuth();
   const [services, setServices] = useState([]);
-  const [myPets, setMyPets] = useState([]);
+  const [petTypes, setPetTypes] = useState([]);
   const [service, setService] = useState(null);
-  const [date, setDate] = useState(null);          // Date obyekti
+  const [date, setDate] = useState(null);
   const [slots, setSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
-  const [slot, setSlot] = useState(null);          // ISO string
-  const [petChoice, setPetChoice] = useState('');  // petId və ya 'none'
+  const [slot, setSlot] = useState(null);
+  const [petType, setPetType] = useState('');
   const [petInfo, setPetInfo] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
@@ -32,8 +32,8 @@ const BookingModal = ({ vet, onClose }) => {
     vetApi.services(vet.id)
       .then((r) => r?.success && setServices(r.data || []))
       .catch(() => {});
-    petApi.mine()
-      .then((r) => r?.success && setMyPets(r.data || []))
+    categoryApi.all(CATEGORY_TYPE.PET)
+      .then((r) => r?.success && setPetTypes(r.data || []))
       .catch(() => {});
   }, [vet.id]);
 
@@ -64,6 +64,10 @@ const BookingModal = ({ vet, onClose }) => {
     return () => { alive = false; };
   }, [service, date, vet.id]);
 
+  const onPhone = (e) => {
+    setPhone(e.target.value.replace(/\D/g, '').slice(0, 10));
+  };
+
   const fmtTime = (iso) => {
     const d = new Date(iso);
     return isNaN(d) ? iso : d.toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
@@ -73,8 +77,8 @@ const BookingModal = ({ vet, onClose }) => {
     e.preventDefault();
     setError('');
     if (!service || !slot) return setError('Xidmət və saat seçilməlidir.');
-    if (!phone.trim()) return setError('Əlaqə nömrəsi mütləqdir.');
-    if (petChoice === 'none' && !petInfo.trim()) return setError('Heyvan haqqında qısa məlumat yazın.');
+    if (phone.length !== 10) return setError('Telefon nömrəsi 10 rəqəm olmalıdır (məs: 0501234567).');
+    if (!petType) return setError('Heyvan növü seçilməlidir.');
 
     setSubmitting(true);
     try {
@@ -82,9 +86,9 @@ const BookingModal = ({ vet, onClose }) => {
         veterinarianProfileId: vet.id,
         vetServiceId: service.id,
         startTime: slot,
-        clientPhone: phone.trim(),
-        petId: petChoice && petChoice !== 'none' ? Number(petChoice) : null,
-        petInfo: petChoice === 'none' ? petInfo.trim() : undefined,
+        clientPhone: phone,
+        petId: null,
+        petInfo: [petType, petInfo.trim()].filter(Boolean).join(', '),
         notes: notes.trim() || undefined,
       });
       if (res?.success) setDone(true);
@@ -104,7 +108,7 @@ const BookingModal = ({ vet, onClose }) => {
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" onClick={onClose}>
         <div className="bg-white rounded-3xl max-w-sm w-full p-8 text-center space-y-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full grid place-items-center mx-auto">
-            <CheckCircle2 size={34} />
+            <FiCheckCircle size={34} />
           </div>
           <h3 className="text-xl font-bold text-slate-900">Randevu yaradıldı!</h3>
           <p className="text-sm text-slate-500">
@@ -121,22 +125,22 @@ const BookingModal = ({ vet, onClose }) => {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-xl z-10">
-          <X size={18} />
+          <FiX size={18} />
         </button>
 
         <div className="flex items-center gap-3 mb-5 pr-10">
           {vet.imageUrl
             ? <img src={vet.imageUrl} alt="" className="w-12 h-12 rounded-2xl object-cover" />
-            : <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl grid place-items-center"><Stethoscope size={22} /></div>}
+            : <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl grid place-items-center"><FiActivity size={22} /></div>}
           <div>
             <h3 className="text-base font-bold text-slate-900">{vet.clinicName}</h3>
-            <p className="text-[11px] text-slate-400 font-semibold">{vet.userFullName || vet.doctorName} • {vet.specialty}</p>
+            <p className="text-[11px] text-slate-400 font-semibold">{vet.veterinarianFullName || vet.userFullName || vet.doctorName} • {vet.specialty}</p>
           </div>
         </div>
 
         {error && (
           <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-semibold flex items-start gap-2">
-            <AlertCircle size={15} className="shrink-0 mt-0.5" /> {error}
+            <FiAlertCircle size={15} className="shrink-0 mt-0.5" /> {error}
           </div>
         )}
 
@@ -155,7 +159,7 @@ const BookingModal = ({ vet, onClose }) => {
                     }`}>
                     <div>
                       <p className="text-sm font-bold text-slate-800">{s.name}</p>
-                      <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5"><Clock size={11} /> {s.durationMinutes} dəq</p>
+                      <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5"><FiClock size={11} /> {s.durationMinutes} dəq</p>
                     </div>
                     <span className="text-sm font-black text-emerald-600">{formatPrice(s.price)}</span>
                   </button>
@@ -216,21 +220,24 @@ const BookingModal = ({ vet, onClose }) => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className={labelCls}>Telefon *</label>
-                  <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0501234567" className={inputCls} />
+                  <input value={phone} onChange={onPhone} inputMode="numeric" placeholder="0501234567" className={inputCls} />
+                  <p className={`text-[10px] font-semibold ${phone.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                    {phone.length}/10 rəqəm
+                  </p>
                 </div>
                 <div className="space-y-1">
-                  <label className={labelCls}>Heyvan</label>
-                  <select value={petChoice} onChange={(e) => setPetChoice(e.target.value)} className={inputCls + ' cursor-pointer'}>
+                  <label className={labelCls}>Heyvan növü *</label>
+                  <select value={petType} onChange={(e) => setPetType(e.target.value)} className={inputCls + ' cursor-pointer'}>
                     <option value="">Seçin...</option>
-                    {myPets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    <option value="none">Platformada yoxdur</option>
+                    {petTypes.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
               </div>
-              {petChoice === 'none' && (
+              <div className="space-y-1">
+                <label className={labelCls}>Heyvanın adı, yaşı (isteğe bağlı)</label>
                 <input value={petInfo} onChange={(e) => setPetInfo(e.target.value)}
-                  placeholder="Məs: Pişik, Mələk, 3 yaş" className={inputCls} />
-              )}
+                  placeholder="Məs: Rex, 3 yaş" className={inputCls} />
+              </div>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
                 placeholder="Şikayət və ya qeyd (isteğe bağlı)" className={inputCls + ' resize-none'} />
             </div>
@@ -241,7 +248,7 @@ const BookingModal = ({ vet, onClose }) => {
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-sm transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-emerald-600/20">
               {submitting
                 ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                : <><Calendar size={16} /> Randevunu Təsdiqlə</>}
+                : <><FiCalendar size={16} /> Randevunu Təsdiqlə</>}
             </button>
           )}
         </form>
@@ -277,7 +284,7 @@ const Vets = () => {
 
   const filtered = vets.filter((v) => {
     const q = search.trim().toLowerCase();
-    const matchQ = !q || [v.clinicName, v.userFullName, v.doctorName, v.specialty].some((x) => (x || '').toLowerCase().includes(q));
+    const matchQ = !q || [v.clinicName, v.veterinarianFullName, v.userFullName, v.doctorName, v.specialty].some((x) => (x || '').toLowerCase().includes(q));
     const matchCity = !city || v.city === city;
     const matchSpec = !specialty || v.specialty === specialty;
     return matchQ && matchCity && matchSpec;
@@ -297,11 +304,11 @@ const Vets = () => {
       <div className="bg-gradient-to-b from-emerald-900/5 via-slate-50 to-transparent py-12 border-b border-slate-200/50">
         <div className="max-w-7xl mx-auto px-4 text-center space-y-3">
           <span className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-[11px] font-bold">
-            <Sparkles size={13} /> Peşəkar və təsdiqli baytarlar
+            <FiStar size={13} /> Peşəkar və təsdiqli baytarlar
           </span>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900">Baytar Randevusu 🩺</h1>
           <p className="text-slate-500 max-w-xl mx-auto text-sm sm:text-base">
-            Kliniği seçin, boş saatı görün və bir kliklə randevu yazın.
+            Kliniki seçin, boş saatı görün və bir kliklə randevu yazın.
           </p>
         </div>
       </div>
@@ -310,7 +317,7 @@ const Vets = () => {
         {/* FİLTRLƏR */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <FiSearch size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Klinika, həkim və ya ixtisas..."
               className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-emerald-500 focus:bg-white transition" />
@@ -334,7 +341,7 @@ const Vets = () => {
           </div>
         ) : filtered.length === 0 ? (
           <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center">
-            <Stethoscope className="mx-auto text-slate-300 mb-3" size={40} />
+            <FiActivity className="mx-auto text-slate-300 mb-3" size={40} />
             <p className="text-sm font-semibold text-slate-600">Axtarışa uyğun baytar tapılmadı.</p>
           </div>
         ) : (
@@ -352,28 +359,28 @@ const Vets = () => {
                 <div className="p-5 flex-1 flex flex-col gap-3">
                   <div>
                     <h3 className="text-base font-bold text-slate-900">{v.clinicName}</h3>
-                    <p className="text-xs text-slate-400 font-semibold mt-0.5">{v.userFullName || v.doctorName}</p>
+                    <p className="text-xs text-slate-400 font-semibold mt-0.5">{v.veterinarianFullName || v.userFullName || v.doctorName}</p>
                   </div>
 
                   <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{v.bio}</p>
 
                   <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-slate-500">
                     <span className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg">
-                      <Award size={12} className="text-emerald-500" /> {v.experienceYears} il təcrübə
+                      <FiAward size={12} className="text-emerald-500" /> {v.experienceYears} il təcrübə
                     </span>
                     <span className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg">
-                      <MapPin size={12} className="text-emerald-500" /> {v.city}
+                      <FiMapPin size={12} className="text-emerald-500" /> {v.city}
                     </span>
                     {v.phone && (
                       <span className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg">
-                        <Phone size={12} className="text-emerald-500" /> {v.phone}
+                        <FiPhone size={12} className="text-emerald-500" /> {v.phone}
                       </span>
                     )}
                   </div>
 
                   <button onClick={() => openBooking(v)}
                     className="mt-auto w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-md shadow-emerald-600/15">
-                    <Calendar size={15} /> Randevu Yaz
+                    <FiCalendar size={15} /> Randevu Yaz
                   </button>
                 </div>
               </div>

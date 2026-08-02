@@ -7,12 +7,17 @@ import { formatPrice } from '../../../utils/helpers';
 const inputCls = 'w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition';
 const labelCls = 'text-[11px] font-bold uppercase tracking-wider text-slate-400';
 
+
+const fromService = (s) => ({
+  name: s?.name || '',
+  description: s?.description || '',
+  price: s?.price ?? '',
+  durationMinutes: s?.durationMinutes ?? 30,
+  isActive: s ? s.isActive !== false : true,
+});
+
 const ServiceModal = ({ service, onClose, onDone, showToast }) => {
-  const [form, setForm] = useState(service ? {
-    name: service.name || '', description: service.description || '',
-    price: service.price ?? '', durationMinutes: service.durationMinutes ?? 30,
-    isActive: service.isActive !== false,
-  } : { name: '', description: '', price: '', durationMinutes: 30, isActive: true });
+  const [form, setForm] = useState(service ? fromService(service) : fromService(null));
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 

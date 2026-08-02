@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { notificationApi } from '../../services/endpoints';
 import { getError } from '../../services/api';
+import { useAuth } from '../context/AuthContext';
 
 /* Type: 1=AdoptionReq 2=AdoptionAns 3=ApptCreated 4=ApptStatus 5=OrderStatus 6=AccountApproved 7=System */
 const TYPE_META = {
@@ -33,6 +34,7 @@ const timeAgo = (d) => {
 
 const Notifications = () => {
   const navigate = useNavigate();
+  const { isShop, isVet } = useAuth();   // ✅ rol əsaslı yönləndirmə üçün
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -58,12 +60,32 @@ const Notifications = () => {
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
+  /* ✅ Backend-in redirectUrl-inə güvənmirik — tip+rol əsaslı təhlükəsiz ünvan */
+  const targetUrl = (n) => {
+    switch (n.type) {
+      case 1: return isShop ? '/profile?panel=shop&tab=adoptions' : '/my-pets';   // yeni müraciət → sahiblənmə müraciətləri
+      case 2: return '/my-requests';                                               // müraciət cavabı
+      case 3: return '/profile?panel=vet&tab=appts';                               // yeni randevu → baytar paneli
+      case 4: return '/appointments';                                              // randevu statusu
+      case 5: return isShop ? '/profile?panel=shop&tab=orders' : '/my-orders';     // sifariş
+      case 6: return '/profile';                                                   // hesab təsdiqi
+      case 7: {
+        const u = n.redirectUrl || '';
+        if (u.startsWith('/pets/')) return '/adopt/' + u.replace('/pets/', '');    // köhnə /pets/id → /adopt/id
+        const safe = ['/testimonials', '/my-orders', '/my-requests', '/appointments', '/my-pets', '/profile', '/shop', '/adopt', '/vets'];
+        return safe.includes(u) ? u : null;                                        // naməlum → heç yerə getmə
+      }
+      default: return null;
+    }
+  };
+
   const handleClick = async (n) => {
     if (!n.isRead) {
       setList((p) => p.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
       try { await notificationApi.read(n.id); ping(); } catch { /* ignore */ }
     }
-    if (n.redirectUrl) navigate(n.redirectUrl);
+    const url = targetUrl(n);
+    if (url) navigate(url);   // ✅ url yoxdursa sadəcə oxunmuş olur, error vermir
   };
 
   const readAll = async () => {

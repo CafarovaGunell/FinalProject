@@ -196,4 +196,24 @@ public class AdoptionRequestService : IAdoptionRequestService
         return await _db.PetShops.Where(x => x.Id == pet.PetShopId)
             .Select(x => x.AppUserId).FirstOrDefaultAsync();
     }
+
+
+    public async Task<ApiResponse<string>> DeleteAsync(int userId, bool isAdmin, int requestId)
+    {
+        var req = await _db.AdoptionRequests.FirstOrDefaultAsync(x => x.Id == requestId);
+        if (req is null) return ApiResponse<string>.Fail("Müraciət tapılmadı.");
+
+        var pet = await _db.Pets.FirstOrDefaultAsync(x => x.Id == req.PetId);
+
+        var isOwner = pet != null && (
+            pet.AppUserId == userId ||
+            (pet.PetShopId.HasValue && await _db.PetShops.AnyAsync(s => s.Id == pet.PetShopId && s.AppUserId == userId)));
+
+        if (!isAdmin && !isOwner && req.ApplicantUserId != userId)
+            return ApiResponse<string>.Fail("Bu müraciəti silməyə icazəniz yoxdur.");
+
+        req.IsDeleted = true;
+        await _db.SaveChangesAsync();
+        return ApiResponse<string>.Ok("ok", "Müraciət silindi.");
+    }
 }

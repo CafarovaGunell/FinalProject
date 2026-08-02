@@ -12,4 +12,5 @@ public interface IAdoptionRequestService
     Task<ApiResponse<List<AdoptionRequestGetDto>>> GetByPetAsync(int userId, int petId);
     Task<ApiResponse<string>> ReviewAsync(int userId, int requestId, AdoptionRequestReviewDto dto);
     Task<ApiResponse<string>> CancelAsync(int userId, int requestId);
+    Task<ApiResponse<string>> DeleteAsync(int userId, bool isAdmin, int requestId);
 }

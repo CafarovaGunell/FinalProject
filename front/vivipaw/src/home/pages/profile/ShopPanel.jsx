@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Store, PawPrint, Package, ShoppingBasket, Save, Camera, AlertCircle,
+  Store, PawPrint, HeartHandshake, Archive, Package, ShoppingBasket, Save, Camera, AlertCircle,
   CheckCircle2, MapPin, Phone, Truck, Ban, ChevronRight,
 } from 'lucide-react';
 import { shopApi, orderApi, uploadApi } from '../../../services/endpoints';
@@ -10,6 +10,8 @@ import { CITIES, ORDER_STATUS_TEXT, ORDER_STATUS_COLOR, PLACEHOLDER_PRODUCT } fr
 import { formatPrice, formatDateTime } from '../../../utils/helpers';
 import ShopPets from './ShopPets';
 import ShopProducts from './ShopProducts';
+import ShopAdoptions from './ShopAdoptions';
+import ShopArchive from './ShopArchive';
 
 const inputCls = 'w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-sky-500 focus:bg-white transition';
 const labelCls = 'text-[11px] font-bold uppercase tracking-wider text-slate-400';
@@ -216,9 +218,9 @@ const ShopOrders = ({ showToast }) => {
 };
 
 /* ═══════════ PANEL QABIĞI ═══════════ */
-const ShopPanel = () => {
+const ShopPanel = ({ initialTab }) => {
   const { user, updateUser } = useAuth();
-  const [tab, setTab] = useState('info');
+ const [tab, setTab] = useState(initialTab || 'info');
   const [shop, setShop] = useState(null);
   const [loadingShop, setLoadingShop] = useState(true);
   const [toast, setToast] = useState('');
@@ -237,6 +239,8 @@ const ShopPanel = () => {
     { v: 'pets', l: 'Heyvan elanlarım', icon: PawPrint },
     { v: 'products', l: 'Məhsullarım', icon: Package },
     { v: 'orders', l: 'Gələn sifarişlər', icon: ShoppingBasket },
+    { v: 'adoptions', l: 'Sahiblənmə müraciətləri', icon: HeartHandshake },
+    { v: 'archive', l: 'Arxiv', icon: Archive },
   ];
 
   return (
@@ -263,6 +267,8 @@ const ShopPanel = () => {
       {tab === 'pets' && <ShopPets showToast={showToast} />}
       {tab === 'products' && <ShopProducts showToast={showToast} />}
       {tab === 'orders' && <ShopOrders showToast={showToast} />}
+      {tab === 'adoptions' && <ShopAdoptions showToast={showToast} />}
+      {tab === 'archive' && <ShopArchive showToast={showToast} />}
     </div>
   );
 };

@@ -53,6 +53,7 @@ export const adoptionApi = {
   byPet:    (petId) => u(API.get(`/adoption-requests/by-pet/${petId}`)),
   review:   (id, d) => u(API.put(`/adoption-requests/${id}/review`, d)),
   cancel:   (id) => u(API.put(`/adoption-requests/${id}/cancel`)),
+  remove:   (id) => u(API.delete(`/adoption-requests/${id}`)), 
 };
 
 export const wishlistApi = {
@@ -163,6 +164,9 @@ export const adminApi = {
   pendingPets:  (page, pageSize) => u(API.get('/Admin/pets/pending', { params: { page, pageSize } })),
   approvePet:   (id, approve, reason) =>
     u(API.put(`/Admin/pets/${id}/approve`, null, { params: { approve, reason } })),
+
+  adoptedPets:  () => u(API.get('/Admin/pets/adopted')), // ✅ YENİ
+
   orders:       (status) => u(API.get('/Admin/orders', { params: { status } })),
   pendingTestimonials: () => u(API.get('/Admin/testimonials/pending')),
   approveTestimonial:  (id, approve) =>
@@ -170,7 +174,9 @@ export const adminApi = {
   users:         (role, search) => u(API.get('/Admin/users', { params: { role, search } })),
   setUserActive: (id, isActive) =>
     u(API.put(`/Admin/users/${id}/active`, null, { params: { isActive } })),
-};
+  setUserRole: (id, role) => u(API.put(`/Admin/users/${id}/role`, { role })),
+  deleteUser:  (id) => u(API.delete(`/Admin/users/${id}`)),
 
+};
 
 

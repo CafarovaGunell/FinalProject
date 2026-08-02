@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { CITIES, APPROVAL_STATUS_TEXT } from '../../utils/constants';
 import ShopPanel from './profile/ShopPanel';
 import VetPanel from './profile/VetPanel';
+import { useSearchParams } from 'react-router-dom';
 
 const inputCls = 'w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-sky-500 focus:bg-white transition';
 const labelCls = 'text-[11px] font-bold uppercase tracking-wider text-slate-400';
@@ -75,7 +76,8 @@ const ProfileTab = () => {
     try {
       const res = await authApi.changePassword({
         currentPassword: pass.currentPassword,
-        newPassword: pass.newPassword,
+  newPassword: pass.newPassword,
+  confirmNewPassword: pass.newPassword,
       });
       if (res?.success) {
         setPassMsg('Parol dəyişdirildi');
@@ -161,7 +163,13 @@ const ProfileTab = () => {
 /* ═══════════ SƏHİFƏ ═══════════ */
 const UserProfile = () => {
   const { user, isShop, isVet, isAdmin } = useAuth();
-  const [tab, setTab] = useState(isShop ? 'shop' : isVet ? 'vet' : 'profile');
+const [searchParams] = useSearchParams();
+const panelParam = searchParams.get('panel');
+const [tab, setTab] = useState(
+  panelParam === 'shop' && isShop ? 'shop'
+    : panelParam === 'vet' && isVet ? 'vet'
+    : isShop ? 'shop' : isVet ? 'vet' : 'profile'
+);
 
   const tabs = [
     { v: 'profile', l: 'Profilim', icon: User, show: true },
@@ -223,11 +231,16 @@ const UserProfile = () => {
 
         {/* MƏZMUN */}
         {tab === 'profile' && <ProfileTab />}
-        {tab === 'shop' && isShop && <ShopPanel />}
-        {tab === 'vet' && isVet && <VetPanel />}
+        {tab === 'shop' && isShop && <ShopPanel initialTab={searchParams.get('tab')} />}
+        {tab === 'vet' && isVet && <VetPanel initialTab={searchParams.get('tab')} />}
       </div>
     </div>
   );
 };
 
 export default UserProfile;
+
+
+
+
+

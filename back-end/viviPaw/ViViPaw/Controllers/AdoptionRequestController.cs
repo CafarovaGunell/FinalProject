@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ViViPaw.DTOs.Adoption;
 using ViViPaw.Helpers;
+using ViViPaw.Models.Identity;
 using ViViPaw.Services.Interfaces;
 
 namespace ViViPaw.Controllers;
@@ -52,6 +53,16 @@ public class AdoptionRequestController : ControllerBase
     public async Task<IActionResult> Cancel(int id)
     {
         var r = await _service.CancelAsync(User.GetUserId(), id);
+        return r.Success ? Ok(r) : BadRequest(r);
+    }
+
+
+    [HttpDelete("{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var isAdmin = User.IsInAnyRole(Roles.Admin, Roles.SuperAdmin);
+        var r = await _service.DeleteAsync(User.GetUserId(), isAdmin, id);
         return r.Success ? Ok(r) : BadRequest(r);
     }
 }

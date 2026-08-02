@@ -18,25 +18,31 @@ const getService  = (a) => a.serviceName || a.vetServiceName || a.vetService?.na
 const getCustomer = (a) => a.customerFullName || a.customer?.fullName || a.clientName || 'Müştəri';
 const getPet      = (a) => a.petName || a.pet?.name || a.petInfo || '';
 
+/* ✅ Bütün sahələri müdafiəli doldurur — heç nə itmir */
+const fromProfile = (p) => ({
+  clinicName: p?.clinicName || '',
+  specialty: p?.specialty || '',
+  experienceYears: p?.experienceYears ?? '',
+  licenseNumber: p?.licenseNumber || '',
+  bio: p?.bio || '',
+  imageUrl: p?.imageUrl || '',
+  phone: p?.phone || '',
+  city: p?.city || 'Bakı',
+  address: p?.address || '',
+});
+
 /* ═══════════ KLİNİKA MƏLUMATLARI ═══════════ */
 const VetInfo = ({ profile, onSaved, showToast }) => {
-  const [form, setForm] = useState({
-    clinicName: '', specialty: '', experienceYears: '', licenseNumber: '',
-    bio: '', imageUrl: '', phone: '', city: 'Bakı', address: '',
-  });
+  const [form, setForm] = useState(fromProfile(profile));
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState('');
   const fileRef = useRef(null);
 
+  /* ✅ Profil gələndə və ya dəyişəndə formanı TAM doldur */
   useEffect(() => {
-    if (profile) setForm({
-      clinicName: profile.clinicName || '', specialty: profile.specialty || '',
-      experienceYears: profile.experienceYears ?? '', licenseNumber: profile.licenseNumber || '',
-      bio: profile.bio || '', imageUrl: profile.imageUrl || '', phone: profile.phone || '',
-      city: profile.city || 'Bakı', address: profile.address || '',
-    });
+    if (profile) setForm(fromProfile(profile));
     setLoaded(true);
   }, [profile]);
 
@@ -233,9 +239,9 @@ const VetAppointments = ({ showToast }) => {
 };
 
 /* ═══════════ PANEL QABIĞI ═══════════ */
-const VetPanel = () => {
+const VetPanel = ({ initialTab }) => {
   const { user, updateUser } = useAuth();
-  const [tab, setTab] = useState('info');
+  const [tab, setTab] = useState(initialTab || 'info');
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [toast, setToast] = useState('');

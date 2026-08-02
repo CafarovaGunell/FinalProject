@@ -31,6 +31,7 @@ import AdminVets from '../home/pages/admin/AdminVets';
 import AdminPets from '../home/pages/admin/AdminPets';
 import AdminTestimonials from '../home/pages/admin/AdminTestimonials';
 import AdminOrders from '../home/pages/admin/AdminOrders';
+import AdminAdoptedPets from '../home/pages/admin/AdminAdoptedPets';
 
 export const router = createBrowserRouter([
   /* ── ƏSAS SAYT (home layout) ── */
@@ -78,6 +79,7 @@ export const router = createBrowserRouter([
       { path: 'pets', element: <AdminPets /> },
       { path: 'testimonials', element: <AdminTestimonials /> },
       { path: 'orders', element: <AdminOrders /> },
+      { path: 'adminadoptedpets', element: <AdminAdoptedPets /> },
     ],
   },
 ]);

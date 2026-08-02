@@ -53,6 +53,16 @@
   },
   {
     "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "AdoptedPets",
+    "RelativePath": "api/Admin/pets/adopted",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
     "Method": "PendingPets",
     "RelativePath": "api/Admin/pets/pending",
     "HttpMethod": "GET",
@@ -163,6 +173,22 @@
   },
   {
     "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "DeleteUser",
+    "RelativePath": "api/Admin/users/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
     "Method": "SetActive",
     "RelativePath": "api/Admin/users/{id}/active",
     "HttpMethod": "PUT",
@@ -178,6 +204,27 @@
         "Name": "isActive",
         "Type": "System.Boolean",
         "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "SetRole",
+    "RelativePath": "api/Admin/users/{id}/role",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "dto",
+        "Type": "ViViPaw.DTOs.Admin.SetRoleDto",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -230,6 +277,22 @@
       {
         "Name": "dto",
         "Type": "ViViPaw.DTOs.Adoption.AdoptionRequestCreateDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdoptionRequestController",
+    "Method": "Delete",
+    "RelativePath": "api/adoption-requests/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
         "IsRequired": true
       }
     ],

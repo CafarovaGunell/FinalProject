@@ -52,9 +52,14 @@ public class PetService : IPetService
         if (f.MinAgeInMonths.HasValue) q = q.Where(x => x.AgeInMonths >= f.MinAgeInMonths);
         if (f.MaxAgeInMonths.HasValue) q = q.Where(x => x.AgeInMonths <= f.MaxAgeInMonths);
 
+        //q = f.AdoptionStatus.HasValue
+        //    ? q.Where(x => x.AdoptionStatus == f.AdoptionStatus)
+        //    : q.Where(x => x.AdoptionStatus != AdoptionStatus.Inactive);
+
         q = f.AdoptionStatus.HasValue
-            ? q.Where(x => x.AdoptionStatus == f.AdoptionStatus)
-            : q.Where(x => x.AdoptionStatus != AdoptionStatus.Inactive);
+    ? q.Where(x => x.AdoptionStatus == f.AdoptionStatus)
+    : q.Where(x => x.AdoptionStatus != AdoptionStatus.Adopted
+                && x.AdoptionStatus != AdoptionStatus.Inactive);
 
         q = f.SortBy switch
         {

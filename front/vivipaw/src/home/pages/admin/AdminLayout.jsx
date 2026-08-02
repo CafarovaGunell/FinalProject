@@ -14,6 +14,7 @@ const NAV = [
   { to: '/admin/testimonials', icon: MessageSquare, label: 'Rəy moderasiyası' },
   { to: '/admin/orders', icon: Package, label: 'Sifarişlər' },
   { to: '/admin/users', icon: Users, label: 'İstifadəçilər' },
+  { to: '/admin/adminadoptedpets', icon: Users, label: 'Sahiblənilənlər' },
 ];
 
 const AdminLayout = () => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Package, Plus, Pencil, Trash2, X, ImagePlus, AlertCircle, Save, Tag,
+  Plus, Pencil, Trash2, X, ImagePlus, AlertCircle, Save, Tag,
 } from 'lucide-react';
 import { productApi, categoryApi, uploadApi } from '../../../services/endpoints';
 import { getError } from '../../../services/api';
@@ -15,19 +15,57 @@ const EMPTY = {
   brand: '', categoryId: '', targetAnimalCategoryId: '', isActive: true, imageUrls: [],
 };
 
+/* Siyahı obyektindən sürətli ilkin doldurma */
+const fromList = (p, prodCats, animalCats) => ({
+  name: p.name || '', description: p.description || '',
+  price: p.price ?? '', discountPrice: p.discountPrice ?? '',
+  stockQuantity: p.stockQuantity ?? '', brand: p.brand || '',
+  categoryId: p.categoryId ? String(p.categoryId)
+    : (prodCats.find((c) => c.name === p.categoryName)?.id ? String(prodCats.find((c) => c.name === p.categoryName).id) : ''),
+  targetAnimalCategoryId: p.targetAnimalCategoryId ? String(p.targetAnimalCategoryId)
+    : (animalCats.find((c) => c.name === (p.targetAnimalName || p.targetAnimalCategoryName))?.id
+      ? String(animalCats.find((c) => c.name === (p.targetAnimalName || p.targetAnimalCategoryName)).id) : ''),
+  isActive: p.isActive !== false,
+  imageUrls: p.imageUrls || (p.mainImageUrl ? [p.mainImageUrl] : []),
+});
+
 /* ═══════════ FORM MODALI ═══════════ */
 const ProductModal = ({ product, prodCats, animalCats, onClose, onDone, showToast }) => {
-  const [form, setForm] = useState(product ? {
-    name: product.name || '', description: product.description || '',
-    price: product.price ?? '', discountPrice: product.discountPrice ?? '',
-    stockQuantity: product.stockQuantity ?? '', brand: product.brand || '',
-    categoryId: product.categoryId || '', targetAnimalCategoryId: product.targetAnimalCategoryId || '',
-    isActive: product.isActive !== false,
-    imageUrls: (product.images || []).map((i) => i.imageUrl || i).filter(Boolean),
-  } : EMPTY);
+  const [form, setForm] = useState(product ? fromList(product, prodCats, animalCats) : EMPTY);
+  const [loadingDetail, setLoadingDetail] = useState(!!product);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+
+  /* ✅ REDAKTƏ: detail-dən TAM məlumatı çək */
+  useEffect(() => {
+    if (!product) return;
+    let alive = true;
+    setLoadingDetail(true);
+    productApi.byId(product.id)
+      .then((res) => {
+        if (!alive || !res?.success || !res.data) return;
+        const d = res.data;
+        setForm({
+          name: d.name ?? '',
+          description: d.description ?? '',
+          price: d.price ?? '',
+          discountPrice: d.discountPrice ?? '',
+          stockQuantity: d.stockQuantity ?? '',
+          brand: d.brand || '',
+          categoryId: d.categoryId ? String(d.categoryId)
+            : (prodCats.find((c) => c.name === d.categoryName)?.id ? String(prodCats.find((c) => c.name === d.categoryName).id) : ''),
+          targetAnimalCategoryId: d.targetAnimalCategoryId ? String(d.targetAnimalCategoryId)
+            : (animalCats.find((c) => c.name === (d.targetAnimalName || d.targetAnimalCategoryName))?.id
+              ? String(animalCats.find((c) => c.name === (d.targetAnimalName || d.targetAnimalCategoryName)).id) : ''),
+          isActive: d.isActive !== false,
+          imageUrls: d.imageUrls || (d.mainImageUrl ? [d.mainImageUrl] : []),
+        });
+      })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoadingDetail(false); });
+    return () => { alive = false; };
+  }, [product?.id, prodCats, animalCats]);
 
   const onFiles = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -77,7 +115,10 @@ const ProductModal = ({ product, prodCats, animalCats, onClose, onDone, showToas
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-xl"><X size={18} /></button>
-        <h3 className="text-lg font-bold text-slate-900 mb-4">{product ? 'Məhsulu redaktə et' : 'Yeni məhsul'}</h3>
+        <h3 className="text-lg font-bold text-slate-900 mb-4">
+          {product ? 'Məhsulu redaktə et' : 'Yeni məhsul'}
+          {loadingDetail && <span className="ml-2 text-xs text-sky-500 font-semibold">məlumatlar yüklənir...</span>}
+        </h3>
 
         {err && <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-semibold flex items-start gap-2"><AlertCircle size={15} className="shrink-0 mt-0.5" /> {err}</div>}
 
@@ -89,12 +130,12 @@ const ProductModal = ({ product, prodCats, animalCats, onClose, onDone, showToas
             <div className="space-y-1"><label className={labelCls}>Kateqoriya *</label>
               <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })} className={inputCls + ' cursor-pointer'}>
                 <option value="">Seçin...</option>
-                {prodCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {prodCats.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
               </select></div>
             <div className="space-y-1"><label className={labelCls}>Hansı heyvan üçün</label>
               <select value={form.targetAnimalCategoryId} onChange={(e) => setForm({ ...form, targetAnimalCategoryId: e.target.value })} className={inputCls + ' cursor-pointer'}>
                 <option value="">Ümumi</option>
-                {animalCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {animalCats.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
               </select></div>
             <div className="space-y-1"><label className={labelCls}>Qiymət (₼) *</label>
               <input type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className={inputCls} /></div>
@@ -138,7 +179,7 @@ const ProductModal = ({ product, prodCats, animalCats, onClose, onDone, showToas
             </div>
           </div>
 
-          <button type="submit" disabled={saving || uploading}
+          <button type="submit" disabled={saving || uploading || loadingDetail}
             className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center gap-2 disabled:opacity-50">
             {saving ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /> : <><Save size={16} /> {product ? 'Yenilə' : 'Məhsul yarat'}</>}
           </button>
@@ -268,8 +309,3 @@ const ShopProducts = ({ showToast }) => {
 };
 
 export default ShopProducts;
-
-
-
-
-
