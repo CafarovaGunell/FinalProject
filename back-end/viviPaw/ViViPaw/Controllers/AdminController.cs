@@ -12,6 +12,7 @@ using ViViPaw.Helpers;
 using ViViPaw.Models.Enums;
 using ViViPaw.Models.Identity;
 using ViViPaw.Services.Interfaces;
+using System.Text.Json;
 
 namespace ViViPaw.Controllers;
 
@@ -132,6 +133,7 @@ public class AdminController : ControllerBase
         var r = await _shop.ApproveAsync(id, User.GetUserId(), dto);
         return r.Success ? Ok(r) : BadRequest(r);
     }
+
 
     // ---------- VETS ----------
     [HttpGet("vets")]
@@ -449,6 +451,401 @@ public class AdminController : ControllerBase
         })
         .OrderByDescending(x => x.adoptedAt)
         .ToList();
+
+        return Ok(ApiResponse<object>.Ok(data));
+    }
+
+
+
+    // ---------- ADOPTION REQUESTS ----------
+    [HttpGet("adoption-requests")]
+    public async Task<IActionResult> AdoptionRequests()
+    {
+        string? S(object? obj, params string[] names)
+        {
+            if (obj == null) return null;
+
+            foreach (var name in names)
+            {
+                var prop = obj.GetType().GetProperty(name);
+                var val = prop?.GetValue(obj)?.ToString();
+
+                if (!string.IsNullOrWhiteSpace(val))
+                    return val;
+            }
+
+            return null;
+        }
+
+        int? I(object? obj, params string[] names)
+        {
+            if (obj == null) return null;
+
+            foreach (var name in names)
+            {
+                var prop = obj.GetType().GetProperty(name);
+                var val = prop?.GetValue(obj);
+
+                if (val is int i) return i;
+                if (val != null && int.TryParse(val.ToString(), out var parsed)) return parsed;
+            }
+
+            return null;
+        }
+
+        var requests = await _db.AdoptionRequests
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync();
+
+        var petIds = requests.Select(x => x.PetId).Distinct().ToList();
+
+        var petsList = await _db.Pets
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(p => petIds.Contains(p.Id))
+            .ToListAsync();
+
+        var pets = petsList.ToDictionary(p => p.Id, p => (object)p);
+
+        var applicantIds = requests
+            .Select(r => I(r, "ApplicantUserId", "UserId", "CustomerUserId", "AdopterUserId"))
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .Distinct()
+            .ToList();
+
+        var reviewerIds = requests
+            .Select(r => I(r, "ReviewedByUserId", "ReviewerUserId"))
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .Distinct()
+            .ToList();
+
+        var ownerIds = petsList
+            .Select(p => I(p, "OwnerUserId", "UserId"))
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .Distinct()
+            .ToList();
+
+        var userIds = applicantIds
+            .Concat(reviewerIds)
+            .Concat(ownerIds)
+            .Distinct()
+            .ToList();
+
+        var users = await _db.Users
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => (object)u);
+
+        var categoryIds = petsList
+            .Select(p => I(p, "CategoryId"))
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .Distinct()
+            .ToList();
+
+        var categories = await _db.Categories
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(c => categoryIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => (object)c);
+
+        var images = await _db.PetImages
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(i => petIds.Contains(i.PetId))
+            .ToListAsync();
+
+        var imagesByPet = images
+            .Cast<object>()
+            .GroupBy(i => I(i, "PetId") ?? 0)
+            .Where(g => g.Key != 0)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var data = requests.Select(r =>
+        {
+            pets.TryGetValue(r.PetId, out var pet);
+
+            var applicantId = I(r, "ApplicantUserId", "UserId", "CustomerUserId", "AdopterUserId");
+            object? applicant = null;
+            if (applicantId.HasValue)
+                users.TryGetValue(applicantId.Value, out applicant);
+
+            var ownerId = I(pet, "OwnerUserId", "UserId");
+            object? owner = null;
+            if (ownerId.HasValue)
+                users.TryGetValue(ownerId.Value, out owner);
+
+            var reviewerId = I(r, "ReviewedByUserId", "ReviewerUserId");
+            object? reviewer = null;
+            if (reviewerId.HasValue)
+                users.TryGetValue(reviewerId.Value, out reviewer);
+
+            var categoryId = I(pet, "CategoryId");
+            object? category = null;
+            if (categoryId.HasValue)
+                categories.TryGetValue(categoryId.Value, out category);
+
+            var imageObjects = imagesByPet.TryGetValue(r.PetId, out var imgs)
+                ? imgs
+                : new List<object>();
+
+            var mainImage = imageObjects
+                .OrderByDescending(i => S(i, "IsMain") == "True")
+                .Select(i => S(i, "ImageUrl", "Url", "Path"))
+                .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+
+            return new
+            {
+                id = r.Id,
+                requestId = r.Id,
+
+                petId = r.PetId,
+                petName = S(pet, "Name"),
+                petBreed = S(pet, "Breed"),
+                petCategoryName = S(category, "Name"),
+                petCity = S(pet, "City"),
+                petImageUrl = mainImage,
+
+                applicantUserId = applicantId,
+                applicantFullName = S(applicant, "FullName", "UserName", "Email") ?? S(r, "FullName"),
+                applicantEmail = S(applicant, "Email"),
+                applicantPhone = S(r, "Phone") ?? S(applicant, "PhoneNumber"),
+                applicantAddress = S(r, "Address"),
+                housingType = S(r, "HousingType"),
+                hasOtherPets = S(r, "HasOtherPets"),
+                reason = S(r, "Reason"),
+
+                ownerUserId = ownerId,
+                ownerFullName = S(owner, "FullName", "UserName", "Email"),
+                ownerEmail = S(owner, "Email"),
+                ownerPhone = S(owner, "PhoneNumber"),
+
+                status = (int)r.Status,
+                statusText = r.Status.ToString(),
+
+                reviewNote = S(r, "ReviewNote"),
+                reviewedAt = S(r, "ReviewedAt"),
+                reviewedByUserId = reviewerId,
+                reviewedByFullName = S(reviewer, "FullName", "UserName", "Email"),
+
+                createdAt = r.CreatedAt,
+                updatedAt = r.UpdatedAt
+            };
+        }).ToList();
+
+        return Ok(ApiResponse<object>.Ok(data));
+    }
+
+
+    // ---------- APPOINTMENTS ----------
+    [HttpGet("appointments")]
+    public async Task<IActionResult> Appointments([FromQuery] AppointmentStatus? status, [FromQuery] DateTime? date)
+    {
+        string? S(object? obj, params string[] names)
+        {
+            if (obj == null) return null;
+
+            foreach (var name in names)
+            {
+                var prop = obj.GetType().GetProperty(name);
+                var val = prop?.GetValue(obj)?.ToString();
+
+                if (!string.IsNullOrWhiteSpace(val))
+                    return val;
+            }
+
+            return null;
+        }
+
+        int? I(object? obj, params string[] names)
+        {
+            if (obj == null) return null;
+
+            foreach (var name in names)
+            {
+                var prop = obj.GetType().GetProperty(name);
+                var val = prop?.GetValue(obj);
+
+                if (val is int i) return i;
+                if (val != null && int.TryParse(val.ToString(), out var parsed)) return parsed;
+            }
+
+            return null;
+        }
+
+        decimal M(object? obj, params string[] names)
+        {
+            if (obj == null) return 0;
+
+            foreach (var name in names)
+            {
+                var prop = obj.GetType().GetProperty(name);
+                var val = prop?.GetValue(obj);
+
+                if (val is decimal d) return d;
+                if (val != null && decimal.TryParse(val.ToString(), out var parsed)) return parsed;
+            }
+
+            return 0;
+        }
+
+        var query = _db.VetAppointments
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .AsQueryable();
+
+        if (status.HasValue)
+            query = query.Where(x => x.Status == status.Value);
+
+        if (date.HasValue)
+        {
+            var start = date.Value.Date;
+            var end = start.AddDays(1);
+
+            query = query.Where(x => x.StartTime >= start && x.StartTime < end);
+        }
+
+        var appointments = await query
+            .OrderByDescending(x => x.StartTime)
+            .ToListAsync();
+
+        var customerIds = appointments
+            .Select(a => I(a, "UserId", "CustomerUserId", "CustomerId", "ApplicantUserId"))
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .Distinct()
+            .ToList();
+
+        var vetProfileIds = appointments
+            .Select(a => I(a, "VeterinarianProfileId", "VetProfileId"))
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .Distinct()
+            .ToList();
+
+        var serviceIds = appointments
+            .Select(a => I(a, "VetServiceId", "ServiceId"))
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .Distinct()
+            .ToList();
+
+        var petIds = appointments
+            .Select(a => I(a, "PetId"))
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .Distinct()
+            .ToList();
+
+        var vetProfiles = await _db.VeterinarianProfiles
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(v => vetProfileIds.Contains(v.Id))
+            .ToDictionaryAsync(v => v.Id, v => (object)v);
+
+        var vetUserIds = vetProfiles.Values
+            .Select(v => I(v, "UserId", "VeterinarianUserId"))
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .Distinct()
+            .ToList();
+
+        var userIds = customerIds
+            .Concat(vetUserIds)
+            .Distinct()
+            .ToList();
+
+        var users = await _db.Users
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => (object)u);
+
+        var services = await _db.VetServices
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(s => serviceIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => (object)s);
+
+        var pets = await _db.Pets
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(p => petIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => (object)p);
+
+        var data = appointments.Select(a =>
+        {
+            var customerId = I(a, "UserId", "CustomerUserId", "CustomerId", "ApplicantUserId");
+            object? customer = null;
+            if (customerId.HasValue)
+                users.TryGetValue(customerId.Value, out customer);
+
+            var vetProfileId = I(a, "VeterinarianProfileId", "VetProfileId");
+            object? vetProfile = null;
+            if (vetProfileId.HasValue)
+                vetProfiles.TryGetValue(vetProfileId.Value, out vetProfile);
+
+            var vetUserId = I(vetProfile, "UserId", "VeterinarianUserId");
+            object? vetUser = null;
+            if (vetUserId.HasValue)
+                users.TryGetValue(vetUserId.Value, out vetUser);
+
+            var serviceId = I(a, "VetServiceId", "ServiceId");
+            object? service = null;
+            if (serviceId.HasValue)
+                services.TryGetValue(serviceId.Value, out service);
+
+            var petId = I(a, "PetId");
+            object? pet = null;
+            if (petId.HasValue)
+                pets.TryGetValue(petId.Value, out pet);
+
+            var price = M(a, "PriceSnapshot", "Price", "TotalPrice");
+            if (price <= 0) price = M(service, "Price");
+
+            return new
+            {
+                id = a.Id,
+                appointmentId = a.Id,
+
+                customerUserId = customerId,
+                customerFullName = S(customer, "FullName", "UserName", "Email"),
+                customerEmail = S(customer, "Email"),
+                customerPhone = S(customer, "PhoneNumber"),
+
+                vetProfileId = vetProfileId,
+                veterinarianFullName = S(vetUser, "FullName", "UserName", "Email"),
+                veterinarianEmail = S(vetUser, "Email"),
+                clinicName = S(vetProfile, "ClinicName", "Name", "BusinessName"),
+                clinicPhone = S(vetProfile, "Phone", "PhoneNumber", "ContactPhone"),
+                clinicCity = S(vetProfile, "City"),
+                clinicAddress = S(vetProfile, "Address"),
+
+                serviceId = serviceId,
+                serviceName = S(service, "Name"),
+                servicePrice = M(service, "Price"),
+                priceSnapshot = price,
+
+                petId = petId,
+                petName = S(pet, "Name") ?? S(a, "PetName"),
+                petBreed = S(pet, "Breed"),
+
+                startTime = a.StartTime,
+                endTime = S(a, "EndTime"),
+                status = (int)a.Status,
+                statusText = a.Status.ToString(),
+
+                reason = S(a, "Reason", "Note", "Notes", "Description"),
+                createdAt = a.CreatedAt,
+                updatedAt = a.UpdatedAt
+            };
+        }).ToList();
 
         return Ok(ApiResponse<object>.Ok(data));
     }

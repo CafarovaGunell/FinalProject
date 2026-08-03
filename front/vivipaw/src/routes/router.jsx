@@ -32,6 +32,13 @@ import AdminPets from '../home/pages/admin/AdminPets';
 import AdminTestimonials from '../home/pages/admin/AdminTestimonials';
 import AdminOrders from '../home/pages/admin/AdminOrders';
 import AdminAdoptedPets from '../home/pages/admin/AdminAdoptedPets';
+import AdminProducts from '../home/pages/admin/AdminProducts';
+import AdminRevenue from '../home/pages/admin/AdminRevenue';
+import AdminArticles from '../home/pages/admin/AdminArticles';
+import AdminAllPets from '../home/pages/admin/AdminAllPets';
+import AdminAdoptionRequests from '../home/pages/admin/AdminAdoptionRequests';
+import AdminAppointments from '../home/pages/admin/AdminAppointments';
+import AdminSettings from '../home/pages/admin/AdminSettings';
 
 export const router = createBrowserRouter([
   /* ── ƏSAS SAYT (home layout) ── */
@@ -80,6 +87,13 @@ export const router = createBrowserRouter([
       { path: 'testimonials', element: <AdminTestimonials /> },
       { path: 'orders', element: <AdminOrders /> },
       { path: 'adminadoptedpets', element: <AdminAdoptedPets /> },
+      { path: 'products', element: <AdminProducts /> },
+      { path: 'revenue', element: <AdminRevenue /> },
+      { path: 'all-pets', element: <AdminAllPets /> },
+      { path: 'articles', element: <AdminArticles /> },
+      { path: 'adoption-requests', element: <AdminAdoptionRequests /> },
+      { path: 'appointments', element: <AdminAppointments /> },
+      { path: 'settings', element: <AdminSettings /> },
     ],
   },
 ]);

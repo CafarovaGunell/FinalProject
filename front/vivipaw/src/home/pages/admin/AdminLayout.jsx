@@ -5,6 +5,9 @@ import {
   Package, Users, ExternalLink, Menu, X, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { LuPackage, LuWalletCards, LuNewspaper, LuPawPrint, LuHeart, LuCalendarCheck, LuSettings  } from 'react-icons/lu';
+
+
 
 const NAV = [
   { to: '/admin', end: true, icon: LayoutDashboard, label: 'Dashboard' },
@@ -15,6 +18,13 @@ const NAV = [
   { to: '/admin/orders', icon: Package, label: 'Sifarişlər' },
   { to: '/admin/users', icon: Users, label: 'İstifadəçilər' },
   { to: '/admin/adminadoptedpets', icon: Users, label: 'Sahiblənilənlər' },
+  { to: '/admin/products', icon: LuPackage, label: 'Məhsullar' },
+  { to: '/admin/revenue', icon: LuWalletCards, label: 'Gəlir' },
+  { to: '/admin/all-pets', icon: LuPawPrint, label: 'Bütün heyvanlar' },
+  { to: '/admin/articles', icon: LuNewspaper, label: 'Məqalələr' },
+  { to: '/admin/adoption-requests', icon: LuHeart, label: 'Müraciətlər' },
+  { to: '/admin/appointments', icon: LuCalendarCheck, label: 'Randevular' },
+  { to: '/admin/settings', icon: LuSettings, label: 'Ayarlar' },
 ];
 
 const AdminLayout = () => {

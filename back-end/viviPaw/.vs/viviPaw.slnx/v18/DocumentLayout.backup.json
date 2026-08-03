@@ -30,9 +30,9 @@
               "Title": "AdminController.cs",
               "DocumentMoniker": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Controllers\\AdminController.cs",
               "RelativeDocumentMoniker": "ViViPaw\\Controllers\\AdminController.cs",
-              "ToolTip": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Controllers\\AdminController.cs",
-              "RelativeToolTip": "ViViPaw\\Controllers\\AdminController.cs",
-              "ViewState": "AgIAAEwBAAAAAAAAAADwv2IBAAAgAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Controllers\\AdminController.cs*",
+              "RelativeToolTip": "ViViPaw\\Controllers\\AdminController.cs*",
+              "ViewState": "AgIAAHoAAAAAAAAAAAAowIcAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-08-02T17:37:10.783Z",
               "EditorCaption": ""
@@ -47,8 +47,7 @@
               "RelativeToolTip": "ViViPaw\\Services\\Interfaces\\IOrderService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAABTAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-02T16:20:35.009Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-02T16:20:35.009Z"
             },
             {
               "$type": "Document",
@@ -60,8 +59,7 @@
               "RelativeToolTip": "ViViPaw\\Controllers\\AdoptionRequestController.cs",
               "ViewState": "AgIAADAAAAAAAAAAAAAswEIAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-02T13:43:21.114Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-02T13:43:21.114Z"
             }
           ]
         }

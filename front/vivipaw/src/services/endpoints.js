@@ -177,6 +177,10 @@ export const adminApi = {
   setUserRole: (id, role) => u(API.put(`/Admin/users/${id}/role`, { role })),
   deleteUser:  (id) => u(API.delete(`/Admin/users/${id}`)),
 
+  adoptionRequests: () => u(API.get('/Admin/adoption-requests')),
+appointments: (status, date) =>
+  u(API.get('/Admin/appointments', { params: { status, date } })),
+
 };
 
 

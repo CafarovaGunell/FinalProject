@@ -1,6 +1,37 @@
 [
   {
     "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "AdoptionRequests",
+    "RelativePath": "api/Admin/adoption-requests",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "Appointments",
+    "RelativePath": "api/Admin/appointments",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "date",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
     "Method": "Dashboard",
     "RelativePath": "api/Admin/dashboard",
     "HttpMethod": "GET",
