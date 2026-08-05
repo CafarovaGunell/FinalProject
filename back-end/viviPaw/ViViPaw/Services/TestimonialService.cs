@@ -1,4 +1,4 @@
-﻿// Services/TestimonialService.cs
+﻿
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
@@ -77,6 +77,9 @@ public class TestimonialService : ITestimonialService
         entity.AppUserId = userId;
         entity.IsApproved = false;
 
+        entity.ApprovalStatus = ApprovalStatus.Pending;
+        entity.RejectReason = null;
+
         _db.Testimonials.Add(entity);
         await _db.SaveChangesAsync();
 
@@ -108,23 +111,137 @@ public class TestimonialService : ITestimonialService
 
     public async Task<ApiResponse<string>> ApproveAsync(int id, bool approve)
     {
-        var t = await _db.Testimonials.FirstOrDefaultAsync(x => x.Id == id);
-        if (t is null) return ApiResponse<string>.Fail("Rəy tapılmadı.");
+        var testimonial = await _db.Testimonials
+            .FirstOrDefaultAsync(x => x.Id == id);
 
-        if (!approve)
+        if (testimonial is null)
+            return ApiResponse<string>.Fail("Rəy tapılmadı.");
+
+        if (approve)
         {
-            t.IsDeleted = true;
+            testimonial.IsApproved = true;
+            testimonial.ApprovalStatus = ApprovalStatus.Approved;
+            testimonial.RejectReason = null;
+
             await _db.SaveChangesAsync();
-            await _notify.CreateAsync(t.AppUserId, "Rəy statusu", "Rəyiniz dərc olunmadı.", NotificationType.System);
-            return ApiResponse<string>.Ok("ok", "Rəy rədd edildi.");
+
+            await _notify.CreateAsync(
+                testimonial.AppUserId,
+                "Rəy statusu",
+                "Rəyiniz dərc olundu. Təşəkkür edirik!",
+                NotificationType.System,
+                "/testimonials"
+            );
+
+            return ApiResponse<string>.Ok(
+                "ok",
+                "Rəy təsdiqləndi."
+            );
         }
 
-        t.IsApproved = true;
-        await _db.SaveChangesAsync();
-        await _notify.CreateAsync(t.AppUserId, "Rəy statusu", "Rəyiniz dərc olundu. Təşəkkür edirik!",
-            NotificationType.System, "/testimonials");
+        
+        testimonial.IsApproved = false;
+        testimonial.ApprovalStatus = ApprovalStatus.Rejected;
+        testimonial.RejectReason = "Admin tərəfindən rədd edildi.";
 
-        return ApiResponse<string>.Ok("ok", "Rəy təsdiqləndi.");
+        await _db.SaveChangesAsync();
+
+        await _notify.CreateAsync(
+            testimonial.AppUserId,
+            "Rəy statusu",
+            "Rəyiniz dərc olunmadı.",
+            NotificationType.System
+        );
+
+        return ApiResponse<string>.Ok(
+            "ok",
+            "Rəy rədd edildi."
+        );
+    }
+
+
+
+    public async Task<ApiResponse<List<TestimonialGetDto>>> GetAdminByStatusAsync(
+    ApprovalStatus status
+)
+    {
+        var query = _db.Testimonials
+            .IgnoreQueryFilters()
+            .Where(x => !x.IsDeleted)
+            .AsQueryable();
+
+        query = status switch
+        {
+            ApprovalStatus.Pending => query.Where(x =>
+                x.ApprovalStatus == ApprovalStatus.Pending
+            ),
+
+            ApprovalStatus.Approved => query.Where(x =>
+                x.ApprovalStatus == ApprovalStatus.Approved
+            ),
+
+            ApprovalStatus.Rejected => query.Where(x =>
+                x.ApprovalStatus == ApprovalStatus.Rejected
+            ),
+
+            _ => query
+        };
+
+        var list = await query
+            .OrderByDescending(x => x.CreatedAt)
+            .ProjectTo<TestimonialGetDto>(_mapper.ConfigurationProvider)
+            .ToListAsync();
+
+        return ApiResponse<List<TestimonialGetDto>>.Ok(list);
+    }
+
+
+    public async Task<ApiResponse<string>> AdminDeleteRejectedAsync(int id)
+    {
+        var testimonial = await _db.Testimonials
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == id);
+
+        if (testimonial is null)
+            return ApiResponse<string>.Fail("Rəy tapılmadı.");
+
+        if (testimonial.ApprovalStatus != ApprovalStatus.Rejected)
+        {
+            return ApiResponse<string>.Fail(
+                "Yalnız rədd edilmiş rəy silinə bilər."
+            );
+        }
+
+        try
+        {
+            /*
+              Soft delete: TestimonialLikes və digər FK məlumatları pozulmur.
+            */
+            testimonial.IsDeleted = true;
+
+            var likes = await _db.TestimonialLikes
+                .IgnoreQueryFilters()
+                .Where(x => x.TestimonialId == testimonial.Id)
+                .ToListAsync();
+
+            foreach (var like in likes)
+            {
+                like.IsDeleted = true;
+            }
+
+            await _db.SaveChangesAsync();
+
+            return ApiResponse<string>.Ok(
+                "ok",
+                "Rədd edilmiş rəy silindi."
+            );
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<string>.Fail(
+                $"Rəy silinə bilmədi: {ex.InnerException?.Message ?? ex.Message}"
+            );
+        }
     }
 
     public async Task<ApiResponse<string>> DeleteAsync(int userId, bool isAdmin, int id)

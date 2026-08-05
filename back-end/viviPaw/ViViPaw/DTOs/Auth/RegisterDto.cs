@@ -1,4 +1,4 @@
-﻿// DTOs/Auth/RegisterDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.Auth;
@@ -22,10 +22,10 @@ public class RegisterDto
 
     public string? City { get; set; }
 
-    /// <summary>
-    /// Customer | PetShop | Veterinarian
-    /// Admin/SuperAdmin yalnız mövcud admin tərəfindən yaradılır
-    /// </summary>
+    
+    //Customer | PetShop | Veterinarian
+    // Admin/SuperAdmin 
+
     [Required]
     public string Role { get; set; } = "Customer";
 }

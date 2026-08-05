@@ -15,6 +15,10 @@ import {
   PET_SIZE_TEXT, PLACEHOLDER_PET,
 } from '../../utils/constants';
 
+
+import StartChatButton from '../components/chat/StartChatButton';
+import { CHAT_TYPE } from '../../utils/chat';
+
 const HOUSING_TYPES = ['Mənzil', 'Həyət evi', 'Ev'];
 
 const PetDetail = () => {
@@ -98,6 +102,32 @@ const PetDetail = () => {
 
   const liked = isInWishlist(pet.id);
   const available = pet.adoptionStatus === 1;
+
+ const myId = user?.id ?? user?.userId ?? user?.Id;
+
+const petOwnerUserId =
+  pet.ownerUserId ??
+  pet.userId ??
+  pet.ownerId ??
+  pet.appUserId ??
+  pet.applicationUserId ??
+  pet.createdByUserId;
+
+const petShopUserId =
+  pet.petShopUserId ??
+  pet.shopUserId ??
+  pet.petShopOwnerUserId;
+
+const chatTargetUserId =
+  Number(pet.ownerType) === 1
+    ? petShopUserId
+    : petOwnerUserId;
+
+const isOwnPet =
+  myId != null &&
+  chatTargetUserId != null &&
+  String(myId) === String(chatTargetUserId);
+
 
   const handleWishlist = async () => {
     if (!user) return setAuthModal(true);
@@ -257,17 +287,33 @@ const PetDetail = () => {
               </span>
             </div>
 
-            {/* MÜRACİƏT */}
-            {available ? (
-              <button onClick={openForm}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl text-sm transition shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2">
-                <Send size={17} /> Sahiblənmək üçün müraciət et
-              </button>
-            ) : (
-              <div className="w-full bg-slate-100 text-slate-500 font-bold py-4 rounded-2xl text-sm text-center">
-                {ADOPTION_STATUS_TEXT[pet.adoptionStatus]} — müraciət bağlanıb
-              </div>
-            )}
+         {/* MESAJ + MÜRACİƏT */}
+<div className="grid sm:grid-cols-2 gap-3">
+  <StartChatButton
+  type={CHAT_TYPE.PET_ADOPTION}
+  petId={pet.id}
+  targetUserId={chatTargetUserId || undefined}
+  disabled={isOwnPet}
+  disabledReason="Öz elanınıza mesaj yaza bilməzsiniz"
+  className="w-full py-4 rounded-2xl"
+>
+  Sahibə yaz
+</StartChatButton>
+
+  {available ? (
+    <button
+      onClick={openForm}
+      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl text-sm transition shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2"
+    >
+      <Send size={17} />
+      Sahiblənmək üçün müraciət et
+    </button>
+  ) : (
+    <div className="w-full bg-slate-100 text-slate-500 font-bold py-4 rounded-2xl text-sm text-center flex items-center justify-center">
+      {ADOPTION_STATUS_TEXT[pet.adoptionStatus]} — müraciət bağlanıb
+    </div>
+  )}
+</div>
           </div>
         </div>
       </div>
@@ -301,9 +347,22 @@ const PetDetail = () => {
                   <input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} className={inputCls} />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Telefon *</label>
-                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="0501234567" className={inputCls} />
-                </div>
+  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Telefon *</label>
+  <input
+    value={form.phone}
+    onChange={(e) => {
+      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+      setForm({ ...form, phone: val });
+    }}
+    inputMode="numeric"
+    maxLength={10}
+    placeholder="0501234567"
+    className={inputCls}
+  />
+  <p className={`text-[10px] font-semibold mt-0.5 ${form.phone.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+    {form.phone.length}/10 rəqəm
+  </p>
+</div>
               </div>
 
               <div>
@@ -345,3 +404,5 @@ const PetDetail = () => {
 };
 
 export default PetDetail;
+
+

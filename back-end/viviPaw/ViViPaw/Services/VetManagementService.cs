@@ -1,11 +1,13 @@
 ﻿
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ViViPaw.Data;
 using ViViPaw.DTOs.Common;
 using ViViPaw.DTOs.Vet;
 using ViViPaw.Models.Enums;
+using ViViPaw.Models.Identity;
 using ViViPaw.Models.Vet;
 using ViViPaw.Services.Interfaces;
 
@@ -15,17 +17,19 @@ public class VetManagementService : IVetManagementService
 {
     private readonly AppDbContext _db;
     private readonly IMapper _mapper;
+    private readonly UserManager<AppUser> _userManager;
 
-    public VetManagementService(AppDbContext db, IMapper mapper)
+    public VetManagementService(AppDbContext db, IMapper mapper, UserManager<AppUser> userManager)
     {
         _db = db;
         _mapper = mapper;
+        _userManager= userManager;
     }
 
     private async Task<VeterinarianProfile?> GetProfileAsync(int userId)
         => await _db.VeterinarianProfiles.FirstOrDefaultAsync(x => x.AppUserId == userId);
 
-    // ================= XİDMƏTLƏR =================
+    //  XİDMƏTLƏR 
     public async Task<ApiResponse<List<VetServiceGetDto>>> GetServicesAsync(int vetProfileId)
     {
         var list = await _db.VetServices
@@ -84,7 +88,7 @@ public class VetManagementService : IVetManagementService
 
         if (hasActive)
         {
-            entity.IsActive = false;   // aktiv randevu var → yalnız gizlət
+            entity.IsActive = false;  
             await _db.SaveChangesAsync();
             return ApiResponse<string>.Ok("ok", "Xidmət deaktiv edildi (aktiv randevular var).");
         }
@@ -95,7 +99,7 @@ public class VetManagementService : IVetManagementService
         return ApiResponse<string>.Ok("ok", "Xidmət silindi.");
     }
 
-    // ================= QRAFİK =================
+    // QRAFİK 
     public async Task<ApiResponse<List<VetScheduleGetDto>>> GetSchedulesAsync(int vetProfileId)
     {
         var list = await _db.VetSchedules
@@ -163,7 +167,7 @@ public class VetManagementService : IVetManagementService
         return ApiResponse<string>.Ok("ok", "Qrafik silindi.");
     }
 
-    // ================= MƏZUNİYYƏT =================
+    //MƏZUNİYYƏT
     public async Task<ApiResponse<List<VetTimeOffGetDto>>> GetTimeOffsAsync(int userId)
     {
         var vet = await GetProfileAsync(userId);
@@ -207,5 +211,72 @@ public class VetManagementService : IVetManagementService
         await _db.SaveChangesAsync();
 
         return ApiResponse<string>.Ok("ok", "Silindi.");
+    }
+
+
+    public async Task<ApiResponse<string>> DeleteRejectedVetAsync(int vetId)
+    {
+        var vet = await _db.VeterinarianProfiles
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == vetId);
+
+        if (vet is null)
+            return ApiResponse<string>.Fail("Baytar profili tapılmadı.");
+
+        // 3 = Rədd edilmiş
+        if (Convert.ToInt32(vet.ApprovalStatus) != 3)
+        {
+            return ApiResponse<string>.Fail(
+                "Yalnız rədd edilmiş baytar profili silinə bilər."
+            );
+        }
+
+        try
+        {
+           
+            vet.IsDeleted = true;
+
+            var user = await _userManager.FindByIdAsync(
+                vet.AppUserId.ToString()
+            );
+
+            if (user is not null)
+            {
+
+                user.IsActive = false;
+
+                var updateResult = await _userManager.UpdateAsync(user);
+
+                if (!updateResult.Succeeded)
+                {
+                    return ApiResponse<string>.Fail(
+                        "Baytar profili gizlədildi, amma user hesabı deaktiv edilə bilmədi."
+                    );
+                }
+
+          
+                var tokens = await _db.RefreshTokens
+                    .Where(x => x.AppUserId == user.Id && !x.IsRevoked)
+                    .ToListAsync();
+
+                foreach (var token in tokens)
+                {
+                    token.IsRevoked = true;
+                }
+            }
+
+            await _db.SaveChangesAsync();
+
+            return ApiResponse<string>.Ok(
+                "ok",
+                "Rədd edilmiş baytar profili silindi və hesab deaktiv edildi."
+            );
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<string>.Fail(
+                $"Baytar silinə bilmədi: {ex.InnerException?.Message ?? ex.Message}"
+            );
+        }
     }
 }

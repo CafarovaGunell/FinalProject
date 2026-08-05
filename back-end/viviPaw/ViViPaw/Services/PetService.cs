@@ -24,7 +24,7 @@ public class PetService : IPetService
         _notify = notify;
     }
 
-    // ---------- SİYAHI (public, filtr + səhifələmə) ----------
+
     public async Task<ApiResponse<PagedResult<PetGetDto>>> GetAllAsync(PetFilterDto f)
     {
         var q = _db.Pets
@@ -86,7 +86,7 @@ public class PetService : IPetService
         });
     }
 
-    // ---------- DETAL ----------
+
     public async Task<ApiResponse<PetDetailDto>> GetByIdAsync(int id)
     {
         var dto = await _db.Pets
@@ -99,7 +99,7 @@ public class PetService : IPetService
             : ApiResponse<PetDetailDto>.Ok(dto);
     }
 
-    // ---------- YARAT ----------
+    // YARAT
     public async Task<ApiResponse<PetDetailDto>> CreateAsync(int userId, PetCreateDto dto)
     {
         var category = await _db.Categories
@@ -109,7 +109,7 @@ public class PetService : IPetService
 
         var pet = _mapper.Map<Pet>(dto);
 
-        // Sahib kimdir?
+  
         var shop = await _db.PetShops.FirstOrDefaultAsync(x => x.AppUserId == userId);
         if (shop is not null)
         {
@@ -119,19 +119,19 @@ public class PetService : IPetService
             pet.OwnerType = PetOwnerType.PetShop;
             pet.PetShopId = shop.Id;
             pet.AppUserId = null;
-            pet.IsApproved = true;                 // mağaza → avtomatik
+            pet.IsApproved = true;                
         }
         else
         {
             pet.OwnerType = PetOwnerType.User;
             pet.AppUserId = userId;
             pet.PetShopId = null;
-            pet.IsApproved = false;                // istifadəçi → admin moderasiyası
+            pet.IsApproved = false;                
         }
 
         pet.AdoptionStatus = AdoptionStatus.Available;
 
-        // Şəkillər
+      
         for (int i = 0; i < dto.ImageUrls.Count; i++)
             pet.Images.Add(new PetImage { ImageUrl = dto.ImageUrls[i], IsMain = i == 0, DisplayOrder = i });
 
@@ -148,7 +148,7 @@ public class PetService : IPetService
         return ApiResponse<PetDetailDto>.Ok(result, msg);
     }
 
-    // ---------- YENİLƏ ----------
+    // YENİLƏ
     public async Task<ApiResponse<PetDetailDto>> UpdateAsync(int userId, bool isAdmin, int petId, PetUpdateDto dto)
     {
         var pet = await _db.Pets.Include(x => x.Images).FirstOrDefaultAsync(x => x.Id == petId);
@@ -191,7 +191,7 @@ public class PetService : IPetService
         return ApiResponse<PetDetailDto>.Ok(result, "Elan yeniləndi.");
     }
 
-    // ---------- SİL (soft) ----------
+    //Sil
     public async Task<ApiResponse<string>> DeleteAsync(int userId, bool isAdmin, int petId)
     {
         var pet = await _db.Pets.FirstOrDefaultAsync(x => x.Id == petId);
@@ -206,7 +206,7 @@ public class PetService : IPetService
         return ApiResponse<string>.Ok("ok", "Elan silindi.");
     }
 
-    // ---------- MƏNİM ELANLARIM ----------
+    // MƏNİM ELANLARIM 
     public async Task<ApiResponse<List<PetGetDto>>> GetMyPetsAsync(int userId)
     {
         var shop = await _db.PetShops.FirstOrDefaultAsync(x => x.AppUserId == userId);
@@ -222,14 +222,14 @@ public class PetService : IPetService
         return ApiResponse<List<PetGetDto>>.Ok(list);
     }
 
-    // ---------- ADMIN: təsdiq gözləyənlər ----------
+    // ADMIN: təsdiq gözləyənlər 
     public async Task<ApiResponse<PagedResult<PetGetDto>>> GetPendingAsync(int page, int pageSize)
     {
         var q = _db.Pets.Where(x => !x.IsApproved).OrderBy(x => x.CreatedAt);
 
-        var total = await q.CountAsync();
-        page = page < 1 ? 1 : page;
-        pageSize = pageSize is < 1 or > 60 ? 12 : pageSize;
+          var total = await q.CountAsync();
+          page = page < 1 ? 1 : page;
+          pageSize = pageSize is < 1 or > 60 ? 12 : pageSize;
 
         var items = await q.Skip((page - 1) * pageSize).Take(pageSize)
             .ProjectTo<PetGetDto>(_mapper.ConfigurationProvider).ToListAsync();
@@ -263,7 +263,99 @@ public class PetService : IPetService
         return ApiResponse<string>.Ok("ok", approve ? "Elan təsdiqləndi." : "Elan rədd edildi.");
     }
 
-    // ---------- helper ----------
+
+
+
+    public async Task<ApiResponse<List<PetGetDto>>> GetAdminByStatusAsync(
+    ApprovalStatus status
+)
+    {
+        
+        var query = _db.Pets
+            .IgnoreQueryFilters()
+            .Include(x => x.Category)
+            .Include(x => x.Images)
+            .Where(x => !x.IsDeleted)
+            .AsQueryable();
+
+        query = status switch
+        {
+            ApprovalStatus.Pending => query.Where(x =>
+                !x.IsApproved &&
+                x.AdoptionStatus != AdoptionStatus.Inactive
+            ),
+
+            ApprovalStatus.Approved => query.Where(x =>
+                x.IsApproved
+            ),
+
+            ApprovalStatus.Rejected => query.Where(x =>
+                !x.IsApproved &&
+                x.AdoptionStatus == AdoptionStatus.Inactive
+            ),
+
+            _ => query
+        };
+
+        var list = await query
+            .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)
+            .ProjectTo<PetGetDto>(_mapper.ConfigurationProvider)
+            .ToListAsync();
+
+        return ApiResponse<List<PetGetDto>>.Ok(list);
+    }
+
+
+
+
+    public async Task<ApiResponse<string>> AdminDeleteRejectedAsync(int petId)
+    {
+        var pet = await _db.Pets
+            .IgnoreQueryFilters()
+            .Include(x => x.Images)
+            .FirstOrDefaultAsync(x => x.Id == petId);
+
+        if (pet is null)
+            return ApiResponse<string>.Fail("Elan tapılmadı.");
+
+        
+         // Yalnız rədd edilmiş elan silinə bilər.
+        
+        if (
+            pet.IsApproved ||
+            pet.AdoptionStatus != AdoptionStatus.Inactive
+        )
+        {
+            return ApiResponse<string>.Fail(
+                "Yalnız rədd edilmiş elan silinə bilər."
+            );
+        }
+
+        try
+        {
+
+            pet.IsDeleted = true;
+
+            foreach (var image in pet.Images)
+            {
+                image.IsDeleted = true;
+            }
+
+            await _db.SaveChangesAsync();
+
+            return ApiResponse<string>.Ok(
+                "ok",
+                "Rədd edilmiş elan silindi."
+            );
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<string>.Fail(
+                $"Elan silinə bilmədi: {ex.InnerException?.Message ?? ex.Message}"
+            );
+        }
+    }
+
     private async Task<bool> IsOwnerAsync(Pet pet, int userId)
     {
         if (pet.AppUserId == userId) return true;
@@ -271,3 +363,4 @@ public class PetService : IPetService
         return await _db.PetShops.AnyAsync(x => x.Id == pet.PetShopId && x.AppUserId == userId);
     }
 }
+

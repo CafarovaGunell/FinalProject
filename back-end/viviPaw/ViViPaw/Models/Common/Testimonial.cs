@@ -1,5 +1,6 @@
-﻿// Models/Common/Testimonial.cs
+﻿
 using ViViPaw.Models.Base;
+using ViViPaw.Models.Enums;
 using ViViPaw.Models.Identity;
 
 namespace ViViPaw.Models.Common;
@@ -11,9 +12,13 @@ public class Testimonial : BaseEntity
 
     public string Comment { get; set; } = string.Empty;
     public string? PetImageUrl { get; set; }
-    public int Rating { get; set; } = 5;          // 1..5
+    public int Rating { get; set; } = 5;        
     public bool IsApproved { get; set; } = false; // Admin moderasiyası
 
     public ICollection<TestimonialLike> Likes { get; set; } = new List<TestimonialLike>();
     // LikesCount sahəsi SİLİNDİ → Likes.Count istifadə olunur (sinxrondan çıxmasın)
+
+    public ApprovalStatus ApprovalStatus { get; set; } = ApprovalStatus.Pending;
+
+    public string? RejectReason { get; set; }
 }

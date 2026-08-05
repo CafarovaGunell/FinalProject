@@ -1,4 +1,4 @@
-﻿// Services/Interfaces/IFileService.cs
+﻿
 namespace ViViPaw.Services.Interfaces;
 
 public interface IFileService

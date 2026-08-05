@@ -1,4 +1,4 @@
-﻿// Controllers/PetShopController.cs
+﻿
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ViViPaw.DTOs.PetShop;
@@ -16,7 +16,7 @@ public class PetShopController : ControllerBase
     private readonly IPetShopService _service;
     public PetShopController(IPetShopService service) => _service = service;
 
-    /// <summary>Mağaza profili yarat (PetShop rolu, bir dəfə)</summary>
+    //Mağaza profili yarat (PetShop rolu, bir dəfə)
     [HttpPost]
     [Authorize(Roles = Roles.PetShop)]
     public async Task<IActionResult> Create([FromBody] PetShopCreateDto dto)
@@ -41,7 +41,10 @@ public class PetShopController : ControllerBase
         return r.Success ? Ok(r) : NotFound(r);
     }
 
-    /// <summary>Təsdiqlənmiş mağazalar (public)</summary>
+
+
+
+    //Təsdiqlənmiş mağazalar (public)
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] string? city)

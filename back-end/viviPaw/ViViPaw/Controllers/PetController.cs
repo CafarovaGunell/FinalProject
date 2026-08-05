@@ -15,7 +15,7 @@ public class PetController : ControllerBase
     private readonly IPetService _service;
     public PetController(IPetService service) => _service = service;
 
-    /// <summary>Bütün heyvanlar (filtr + səhifələmə)</summary>
+    //Bütün heyvanlar (filtr + səhifələmə)
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] PetFilterDto filter)
@@ -29,7 +29,9 @@ public class PetController : ControllerBase
         return r.Success ? Ok(r) : NotFound(r);
     }
 
-    /// <summary>Mənim elanlarım</summary>
+ 
+
+
     [HttpGet("my-pets")]
     [Authorize(Roles = $"{Roles.Customer},{Roles.PetShop}")]
     public async Task<IActionResult> MyPets()

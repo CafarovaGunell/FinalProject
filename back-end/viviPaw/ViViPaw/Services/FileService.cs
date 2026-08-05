@@ -1,4 +1,4 @@
-﻿// Services/FileService.cs
+﻿
 using ViViPaw.Services.Interfaces;
 
 namespace ViViPaw.Services;
@@ -9,7 +9,7 @@ public class FileService : IFileService
     private readonly IHttpContextAccessor _http;
 
     private static readonly string[] AllowedExt = { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
-    private const long MaxSize = 5 * 1024 * 1024; // 5 MB
+    private const long MaxSize = 5 * 1024 * 1024; 
 
     public FileService(IWebHostEnvironment env, IHttpContextAccessor http)
     {
@@ -39,7 +39,7 @@ public class FileService : IFileService
         await using var stream = new FileStream(fullPath, FileMode.Create);
         await file.CopyToAsync(stream);
 
-        // Frontend üçün tam URL
+
         var req = _http.HttpContext!.Request;
         return $"{req.Scheme}://{req.Host}/uploads/{folder}/{fileName}";
     }
@@ -58,7 +58,7 @@ public class FileService : IFileService
 
         try
         {
-            var path = new Uri(relativeUrl).AbsolutePath.TrimStart('/'); // uploads/pets/xxx.jpg
+            var path = new Uri(relativeUrl).AbsolutePath.TrimStart('/'); 
             var root = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
             var full = Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar));
 

@@ -25,7 +25,6 @@ public class AppointmentService : IAppointmentService
         _notify = notify;
     }
 
-    // ================= BOŞ SLOTLAR =================
     public async Task<ApiResponse<List<AvailableSlotDto>>> GetAvailableSlotsAsync(
         int vetProfileId, DateTime date, int serviceId)
     {
@@ -46,7 +45,7 @@ public class AppointmentService : IAppointmentService
         if (day > DateTime.Now.Date.AddDays(60))
             return ApiResponse<List<AvailableSlotDto>>.Fail("Ən çox 60 gün irəli randevu yazıla bilər.");
 
-        // 1) O günün qrafiki varmı?
+        //  O günün qrafiki varmı?
         var schedule = await _db.VetSchedules.FirstOrDefaultAsync(x =>
             x.VeterinarianProfileId == vetProfileId &&
             x.DayOfWeek == day.DayOfWeek &&
@@ -72,7 +71,7 @@ public class AppointmentService : IAppointmentService
             .Select(x => new { x.StartTime, x.EndTime })
             .ToListAsync();
 
-        // 4) Slotları qur
+      
         var slots = new List<AvailableSlotDto>();
         var step = schedule.SlotDurationMinutes <= 0 ? 30 : schedule.SlotDurationMinutes;
         var duration = service.DurationMinutes <= 0 ? 30 : service.DurationMinutes;
@@ -115,7 +114,7 @@ public class AppointmentService : IAppointmentService
             slots.Any() ? $"{slots.Count} boş vaxt tapıldı." : "Bu tarixdə boş vaxt yoxdur.");
     }
 
-    // ================= RANDEVU YARAT =================
+    //RANDEVU YARAT 
     public async Task<ApiResponse<AppointmentGetDto>> CreateAsync(int userId, AppointmentCreateDto dto)
     {
         var vet = await _db.VeterinarianProfiles
@@ -129,7 +128,7 @@ public class AppointmentService : IAppointmentService
             x.Id == dto.VetServiceId && x.VeterinarianProfileId == vet.Id && x.IsActive);
         if (service is null) return ApiResponse<AppointmentGetDto>.Fail("Xidmət tapılmadı.");
 
-        // Slot hələ də boşdurmu? (təkrar yoxlama - vacib)
+        // Slot hələ də boşdurmu?
         var slotCheck = await GetAvailableSlotsAsync(vet.Id, dto.StartTime.Date, service.Id);
         if (!slotCheck.Success)
             return ApiResponse<AppointmentGetDto>.Fail(slotCheck.Message);
@@ -181,7 +180,7 @@ public class AppointmentService : IAppointmentService
         return ApiResponse<AppointmentGetDto>.Ok(result, "Randevunuz qeydə alındı. Baytar təsdiqi gözlənilir.");
     }
 
-    // ================= SİYAHILAR =================
+    //SİYAHILAR
     public async Task<ApiResponse<List<AppointmentGetDto>>> GetMyAppointmentsAsync(int userId, AppointmentStatus? status)
     {
         var q = _db.VetAppointments.Where(x => x.CustomerUserId == userId);
@@ -232,7 +231,7 @@ public class AppointmentService : IAppointmentService
         return ApiResponse<AppointmentGetDto>.Ok(dto);
     }
 
-    // ================= STATUS (baytar) =================
+    //STATUS (baytar)
     public async Task<ApiResponse<string>> ChangeStatusAsync(int userId, int id, AppointmentStatus status, string? reason)
     {
         var appt = await _db.VetAppointments
@@ -263,7 +262,7 @@ public class AppointmentService : IAppointmentService
         return ApiResponse<string>.Ok("ok", "Status yeniləndi.");
     }
 
-    // ================= LƏĞV (müştəri) =================
+    // LƏĞV (müştəri) 
     public async Task<ApiResponse<string>> CancelByCustomerAsync(int userId, int id, string? reason)
     {
         var appt = await _db.VetAppointments.Include(x => x.VeterinarianProfile)

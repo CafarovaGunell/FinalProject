@@ -7,12 +7,32 @@
       "RelativeMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|solutionrelative:vivipaw\\controllers\\admincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|c:\\users\\gunel cafarova\\desktop\\finalproject\\back-end\\vivipaw\\vivipaw\\services\\interfaces\\iorderservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|solutionrelative:vivipaw\\services\\interfaces\\iorderservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|c:\\users\\gunel cafarova\\desktop\\finalproject\\back-end\\vivipaw\\vivipaw\\services\\testimonialservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|solutionrelative:vivipaw\\services\\testimonialservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|c:\\users\\gunel cafarova\\desktop\\finalproject\\back-end\\vivipaw\\vivipaw\\controllers\\adoptionrequestcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|solutionrelative:vivipaw\\controllers\\adoptionrequestcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|c:\\users\\gunel cafarova\\desktop\\finalproject\\back-end\\vivipaw\\vivipaw\\services\\interfaces\\itestimonialservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|solutionrelative:vivipaw\\services\\interfaces\\itestimonialservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|c:\\users\\gunel cafarova\\desktop\\finalproject\\back-end\\vivipaw\\vivipaw\\services\\interfaces\\ipetservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|solutionrelative:vivipaw\\services\\interfaces\\ipetservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|c:\\users\\gunel cafarova\\desktop\\finalproject\\back-end\\vivipaw\\vivipaw\\services\\petservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|solutionrelative:vivipaw\\services\\petservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|c:\\users\\gunel cafarova\\desktop\\finalproject\\back-end\\vivipaw\\vivipaw\\services\\interfaces\\ipetshopservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|solutionrelative:vivipaw\\services\\interfaces\\ipetshopservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|c:\\users\\gunel cafarova\\desktop\\finalproject\\back-end\\vivipaw\\vivipaw\\services\\petshopservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|solutionrelative:vivipaw\\services\\petshopservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|c:\\users\\gunel cafarova\\desktop\\finalproject\\back-end\\vivipaw\\vivipaw\\services\\vetmanagementservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F054D9F9-30EC-1273-DC93-B612A35AA6E5}|ViViPaw\\ViViPaw.csproj|solutionrelative:vivipaw\\services\\vetmanagementservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,8 +42,86 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 6,
           "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "TestimonialService.cs",
+              "DocumentMoniker": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\TestimonialService.cs",
+              "RelativeDocumentMoniker": "ViViPaw\\Services\\TestimonialService.cs",
+              "ToolTip": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\TestimonialService.cs*",
+              "RelativeToolTip": "ViViPaw\\Services\\TestimonialService.cs*",
+              "ViewState": "AgIAANYAAAAAAAAAAADwv/sAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T22:59:02.308Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "PetService.cs",
+              "DocumentMoniker": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\PetService.cs",
+              "RelativeDocumentMoniker": "ViViPaw\\Services\\PetService.cs",
+              "ToolTip": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\PetService.cs",
+              "RelativeToolTip": "ViViPaw\\Services\\PetService.cs",
+              "ViewState": "AgIAAE0BAAAAAAAAAADwv2UBAAApAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T22:48:57.275Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "ITestimonialService.cs",
+              "DocumentMoniker": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\Interfaces\\ITestimonialService.cs",
+              "RelativeDocumentMoniker": "ViViPaw\\Services\\Interfaces\\ITestimonialService.cs",
+              "ToolTip": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\Interfaces\\ITestimonialService.cs*",
+              "RelativeToolTip": "ViViPaw\\Services\\Interfaces\\ITestimonialService.cs*",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAAABYAAAA/AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T22:48:33.793Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "IPetService.cs",
+              "DocumentMoniker": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\Interfaces\\IPetService.cs",
+              "RelativeDocumentMoniker": "ViViPaw\\Services\\Interfaces\\IPetService.cs",
+              "ToolTip": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\Interfaces\\IPetService.cs",
+              "RelativeToolTip": "ViViPaw\\Services\\Interfaces\\IPetService.cs",
+              "ViewState": "AgIAAAoAAAAAAAAAAAA1wBgAAABCAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T22:47:58.601Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "IPetShopService.cs",
+              "DocumentMoniker": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\Interfaces\\IPetShopService.cs",
+              "RelativeDocumentMoniker": "ViViPaw\\Services\\Interfaces\\IPetShopService.cs",
+              "ToolTip": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\Interfaces\\IPetShopService.cs",
+              "RelativeToolTip": "ViViPaw\\Services\\Interfaces\\IPetShopService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T21:56:12.308Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "PetShopService.cs",
+              "DocumentMoniker": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\PetShopService.cs",
+              "RelativeDocumentMoniker": "ViViPaw\\Services\\PetShopService.cs",
+              "ToolTip": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\PetShopService.cs",
+              "RelativeToolTip": "ViViPaw\\Services\\PetShopService.cs",
+              "ViewState": "AgIAAGAAAAAAAAAAAAA9wIwAAABCAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T21:47:47.558Z",
+              "EditorCaption": ""
+            },
             {
               "$type": "Document",
               "DocumentIndex": 0,
@@ -32,34 +130,23 @@
               "RelativeDocumentMoniker": "ViViPaw\\Controllers\\AdminController.cs",
               "ToolTip": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Controllers\\AdminController.cs*",
               "RelativeToolTip": "ViViPaw\\Controllers\\AdminController.cs*",
-              "ViewState": "AgIAAHoAAAAAAAAAAAAowIcAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAHMDAAAAAAAAAAAowJMDAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-02T17:37:10.783Z",
+              "WhenOpened": "2026-08-04T21:35:01.922Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "IOrderService.cs",
-              "DocumentMoniker": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\Interfaces\\IOrderService.cs",
-              "RelativeDocumentMoniker": "ViViPaw\\Services\\Interfaces\\IOrderService.cs",
-              "ToolTip": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\Interfaces\\IOrderService.cs",
-              "RelativeToolTip": "ViViPaw\\Services\\Interfaces\\IOrderService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAABTAAAAAAAAAA==",
+              "DocumentIndex": 7,
+              "Title": "VetManagementService.cs",
+              "DocumentMoniker": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\VetManagementService.cs",
+              "RelativeDocumentMoniker": "ViViPaw\\Services\\VetManagementService.cs",
+              "ToolTip": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Services\\VetManagementService.cs",
+              "RelativeToolTip": "ViViPaw\\Services\\VetManagementService.cs",
+              "ViewState": "AgIAAKoAAAAAAAAAAAA7wCQBAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-02T16:20:35.009Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "AdoptionRequestController.cs",
-              "DocumentMoniker": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Controllers\\AdoptionRequestController.cs",
-              "RelativeDocumentMoniker": "ViViPaw\\Controllers\\AdoptionRequestController.cs",
-              "ToolTip": "C:\\Users\\Gunel Cafarova\\Desktop\\FinalProject\\back-end\\viviPaw\\ViViPaw\\Controllers\\AdoptionRequestController.cs",
-              "RelativeToolTip": "ViViPaw\\Controllers\\AdoptionRequestController.cs",
-              "ViewState": "AgIAADAAAAAAAAAAAAAswEIAAAAFAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-02T13:43:21.114Z"
+              "WhenOpened": "2026-08-04T21:46:27.911Z",
+              "EditorCaption": ""
             }
           ]
         }

@@ -1,4 +1,4 @@
-﻿// Services/Interfaces/IWishListService.cs
+﻿
 using ViViPaw.DTOs.Common;
 using ViViPaw.DTOs.WishList;
 

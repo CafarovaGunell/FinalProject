@@ -1,4 +1,4 @@
-﻿// Models/Common/TestimonialLike.cs
+﻿
 using ViViPaw.Models.Base;
 using ViViPaw.Models.Identity;
 

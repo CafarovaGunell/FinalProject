@@ -1,4 +1,4 @@
-﻿// Models/Identity/AppRole.cs
+﻿
 using Microsoft.AspNetCore.Identity;
 
 namespace ViViPaw.Models.Identity;

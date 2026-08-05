@@ -1,4 +1,4 @@
-﻿// Services/AuthService.cs
+﻿
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -31,7 +31,7 @@ public class AuthService : IAuthService
         _jwt = jwt.Value;
     }
 
-    // ============ REGISTER ============
+    //REGISTER
     public async Task<ApiResponse<AuthResponseDto>> RegisterAsync(RegisterDto dto)
     {
         // Yalnız bu rollarla açıq qeydiyyat mümkündür
@@ -60,7 +60,7 @@ public class AuthService : IAuthService
 
         await _userManager.AddToRoleAsync(user, dto.Role);
 
-        // Customer üçün avtomatik səbət
+
         if (dto.Role == Roles.Customer)
         {
             _db.Carts.Add(new Cart { AppUserId = user.Id });
@@ -75,7 +75,7 @@ public class AuthService : IAuthService
         return ApiResponse<AuthResponseDto>.Ok(response, msg);
     }
 
-    // ============ LOGIN ============
+    //  LOGIN 
     public async Task<ApiResponse<AuthResponseDto>> LoginAsync(LoginDto dto)
     {
         var user = await _userManager.FindByEmailAsync(dto.Email);
@@ -92,7 +92,7 @@ public class AuthService : IAuthService
         return ApiResponse<AuthResponseDto>.Ok(response, "Giriş uğurludur.");
     }
 
-    // ============ REFRESH ============
+    //REFRESH
     public async Task<ApiResponse<AuthResponseDto>> RefreshTokenAsync(RefreshTokenDto dto)
     {
         var principal = _tokenService.GetPrincipalFromExpiredToken(dto.AccessToken);
@@ -110,14 +110,14 @@ public class AuthService : IAuthService
         if (stored is null || !stored.IsActive)
             return ApiResponse<AuthResponseDto>.Fail("Refresh token etibarsızdır. Yenidən daxil olun.");
 
-        stored.IsRevoked = true;                 // köhnəni ləğv et (rotation)
+        stored.IsRevoked = true;               
         await _db.SaveChangesAsync();
 
         var response = await BuildAuthResponseAsync(user);
         return ApiResponse<AuthResponseDto>.Ok(response, "Token yeniləndi.");
     }
 
-    // ============ LOGOUT ============
+    // LOGOUT 
     public async Task<ApiResponse<string>> LogoutAsync(int userId, string refreshToken)
     {
         var stored = await _db.RefreshTokens
@@ -132,7 +132,7 @@ public class AuthService : IAuthService
         return ApiResponse<string>.Ok("ok", "Çıxış edildi.");
     }
 
-    // ============ CHANGE PASSWORD ============
+    //CHANGE PASSWORD
     public async Task<ApiResponse<string>> ChangePasswordAsync(int userId, ChangePasswordDto dto)
     {
         var user = await _userManager.FindByIdAsync(userId.ToString());
@@ -144,7 +144,7 @@ public class AuthService : IAuthService
             return ApiResponse<string>.Fail("Parol dəyişdirilmədi.",
                 result.Errors.Select(e => e.Description).ToList());
 
-        // Bütün refresh tokenləri ləğv et
+      
         var tokens = await _db.RefreshTokens
             .Where(x => x.AppUserId == userId && !x.IsRevoked).ToListAsync();
         tokens.ForEach(t => t.IsRevoked = true);
@@ -153,7 +153,7 @@ public class AuthService : IAuthService
         return ApiResponse<string>.Ok("ok", "Parol uğurla dəyişdirildi.");
     }
 
-    // ============ HELPER ============
+    //HELPER
     private async Task<AuthResponseDto> BuildAuthResponseAsync(AppUser user)
     {
         var roles = await _userManager.GetRolesAsync(user);
@@ -180,7 +180,7 @@ public class AuthService : IAuthService
             ExpiresAt = expiresAt
         };
 
-        // PetShop / Vet profili varsa — frontend yönləndirməsi üçün
+    
         if (roles.Contains(Roles.PetShop))
         {
             var shop = await _db.PetShops
@@ -201,3 +201,5 @@ public class AuthService : IAuthService
         return dto;
     }
 }
+
+

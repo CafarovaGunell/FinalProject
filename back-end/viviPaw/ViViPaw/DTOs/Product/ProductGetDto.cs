@@ -1,4 +1,4 @@
-﻿// DTOs/Product/ProductGetDto.cs
+﻿
 namespace ViViPaw.DTOs.Product;
 
 public class ProductGetDto

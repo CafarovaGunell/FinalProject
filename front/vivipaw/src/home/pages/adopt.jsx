@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +20,16 @@ const SORT_OPTIONS = [
   { value: 'age_asc', label: 'Yaş ↑' },
   { value: 'age_desc', label: 'Yaş ↓' },
 ];
+
+/* ── Debounce hook ── */
+const useDebounce = (value, delay = 400) => {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+};
 
 const Adopt = () => {
   const { toggleWishlist, isInWishlist } = useWishlist();
@@ -49,6 +59,31 @@ const Adopt = () => {
   });
 
   const [searchInput, setSearchInput] = useState(filters.search);
+  const debouncedSearch = useDebounce(searchInput, 400);
+
+  /* ── YALNIZ ŞƏHƏR ƏLAVƏLƏRİ ── */
+  const [cityInput, setCityInput] = useState(searchParams.get('city') || '');
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const cityWrapperRef = useRef(null);
+
+  const filteredCities = CITIES.filter((c) =>
+    c.toLowerCase().includes(cityInput.toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (cityWrapperRef.current && !cityWrapperRef.current.contains(e.target)) {
+        setShowCityDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  /* ── YALNIZ AXTARIŞ ƏLAVƏSİ: debounce filters.search-ə yazır ── */
+  useEffect(() => {
+    setFilters((f) => ({ ...f, search: debouncedSearch, page: 1 }));
+  }, [debouncedSearch]);
 
   useEffect(() => {
     categoryApi.all(CATEGORY_TYPE.PET)
@@ -99,15 +134,11 @@ const Adopt = () => {
 
   const resetFilters = () => {
     setSearchInput('');
+    setCityInput('');
     setFilters({
       search: '', categoryId: '', city: '', gender: '', size: '',
       isVaccinated: '', isUrgent: '', ownerType: '', sortBy: 'newest', page: 1,
     });
-  };
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    setFilter('search', searchInput.trim());
   };
 
   const handleWishlist = async (e, petId) => {
@@ -144,14 +175,51 @@ const Adopt = () => {
         </div>
       </div>
 
-      {/* Şəhər */}
+      {/* Şəhər — YALNIZ BU HİSSƏ DƏYİŞDi */}
       <div className="space-y-2 pt-3 border-t border-slate-100">
         <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Şəhər</label>
-        <select value={filters.city} onChange={(e) => setFilter('city', e.target.value)}
-          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500">
-          <option value="">Bütün şəhərlər</option>
-          {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+        <div className="relative" ref={cityWrapperRef}>
+          <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={cityInput}
+            onChange={(e) => {
+              setCityInput(e.target.value);
+              setShowCityDropdown(true);
+              if (e.target.value === '') setFilter('city', '');
+            }}
+            onFocus={() => setShowCityDropdown(true)}
+            placeholder="Şəhər axtar..."
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition"
+          />
+          {cityInput && (
+            <button onClick={() => { setCityInput(''); setFilter('city', ''); }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <X size={13} />
+            </button>
+          )}
+          {showCityDropdown && (
+            <div className="absolute z-30 top-full mt-1 left-0 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+              <button onClick={() => { setCityInput(''); setFilter('city', ''); setShowCityDropdown(false); }}
+                className={`w-full text-left px-3 py-2 text-xs font-semibold transition hover:bg-slate-50 ${
+                  !filters.city ? 'text-indigo-600 bg-indigo-50' : 'text-slate-600'
+                }`}>
+                Bütün şəhərlər
+              </button>
+              {filteredCities.map((c) => (
+                <button key={c} onClick={() => { setCityInput(c); setFilter('city', c); setShowCityDropdown(false); }}
+                  className={`w-full text-left px-3 py-2 text-xs font-semibold transition hover:bg-slate-50 ${
+                    filters.city === c ? 'text-indigo-600 bg-indigo-50' : 'text-slate-600'
+                  }`}>
+                  {c}
+                </button>
+              ))}
+              {filteredCities.length === 0 && (
+                <p className="px-3 py-2.5 text-xs text-slate-400 font-semibold">Şəhər tapılmadı</p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Cins */}
@@ -245,18 +313,23 @@ const Adopt = () => {
 
           <main className="lg:col-span-9 space-y-6">
 
-            {/* AXTARIŞ PANELİ */}
+            {/* AXTARIŞ PANELİ — YALNIZ BU HİSSƏ DƏYİŞDi */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row gap-3 items-center">
-              <form onSubmit={handleSearchSubmit} className="relative w-full sm:flex-1">
+              <div className="relative w-full sm:flex-1">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
+                <input
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Ad, cins və ya şəhərə görə axtar..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-20 py-2.5 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition" />
-                <button type="submit"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition">
-                  Axtar
-                </button>
-              </form>
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-10 py-2.5 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition"
+                />
+                {searchInput && (
+                  <button onClick={() => setSearchInput('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition">
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
 
               <div className="flex w-full sm:w-auto gap-2 items-center">
                 <select value={filters.sortBy} onChange={(e) => setFilter('sortBy', e.target.value)}

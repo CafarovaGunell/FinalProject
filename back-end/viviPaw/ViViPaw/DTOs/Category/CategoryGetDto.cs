@@ -1,4 +1,4 @@
-﻿// DTOs/Category/CategoryGetDto.cs
+﻿
 using ViViPaw.Models.Enums;
 
 namespace ViViPaw.DTOs.Category;

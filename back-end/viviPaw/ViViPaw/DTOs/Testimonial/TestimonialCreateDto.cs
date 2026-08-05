@@ -1,4 +1,4 @@
-﻿// DTOs/Testimonial/TestimonialCreateDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.Testimonial;

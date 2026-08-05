@@ -1,4 +1,4 @@
-﻿// Services/AdoptionRequestService.cs
+﻿
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
@@ -60,7 +60,7 @@ public class AdoptionRequestService : IAdoptionRequestService
         return ApiResponse<AdoptionRequestGetDto>.Ok(result, "Müraciətiniz göndərildi.");
     }
 
-    /// <summary>Mənim göndərdiyim müraciətlər</summary>
+    ///Mənim göndərdiyim müraciətlər
     public async Task<ApiResponse<List<AdoptionRequestGetDto>>> GetMyRequestsAsync(int userId)
     {
         var list = await _db.AdoptionRequests
@@ -72,7 +72,7 @@ public class AdoptionRequestService : IAdoptionRequestService
         return ApiResponse<List<AdoptionRequestGetDto>>.Ok(list);
     }
 
-    /// <summary>Mənim elanlarıma gələn müraciətlər</summary>
+    ///Mənim elanlarıma gələn müraciətlər
     public async Task<ApiResponse<List<AdoptionRequestGetDto>>> GetReceivedAsync(int userId)
     {
         var shopId = await _db.PetShops.Where(x => x.AppUserId == userId).Select(x => (int?)x.Id).FirstOrDefaultAsync();
@@ -103,7 +103,7 @@ public class AdoptionRequestService : IAdoptionRequestService
         return ApiResponse<List<AdoptionRequestGetDto>>.Ok(list);
     }
 
-    // ---------- TƏSDİQ / RƏDD ----------
+    //TƏSDİQ - RƏDD
     public async Task<ApiResponse<string>> ReviewAsync(int userId, int requestId, AdoptionRequestReviewDto dto)
     {
         var req = await _db.AdoptionRequests.Include(x => x.Pet)
@@ -128,7 +128,7 @@ public class AdoptionRequestService : IAdoptionRequestService
         {
             req.Pet.AdoptionStatus = AdoptionStatus.Adopted;
 
-            // Digər gözləyən müraciətləri avtomatik rədd et
+
             var others = await _db.AdoptionRequests
                 .Where(x => x.PetId == req.PetId && x.Id != req.Id && x.Status == RequestStatus.Pending)
                 .ToListAsync();
@@ -149,7 +149,7 @@ public class AdoptionRequestService : IAdoptionRequestService
         }
         else
         {
-            // Başqa gözləyən yoxdursa statusu geri qaytar
+
             var stillPending = await _db.AdoptionRequests
                 .AnyAsync(x => x.PetId == req.PetId && x.Id != req.Id && x.Status == RequestStatus.Pending);
 

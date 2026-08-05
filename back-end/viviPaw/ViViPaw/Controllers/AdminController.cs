@@ -5,14 +5,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System.Collections;
 using System.Linq.Expressions;
+using System.Text.Json;
 using ViViPaw.Data;
 using ViViPaw.DTOs.Admin;
 using ViViPaw.DTOs.Common;
 using ViViPaw.Helpers;
 using ViViPaw.Models.Enums;
 using ViViPaw.Models.Identity;
+using ViViPaw.Services;
 using ViViPaw.Services.Interfaces;
-using System.Text.Json;
 
 namespace ViViPaw.Controllers;
 
@@ -29,6 +30,7 @@ public class AdminController : ControllerBase
     private readonly IUserProfileService _user;
     private readonly AppDbContext _db;
     private readonly UserManager<AppUser> _userManager;
+    private readonly IVetManagementService _vetManagementService;
 
     public AdminController(
         IPetShopService shop,
@@ -38,7 +40,8 @@ public class AdminController : ControllerBase
         ITestimonialService testimonial,
         IUserProfileService user,
         AppDbContext db,
-        UserManager<AppUser> userManager)
+        UserManager<AppUser> userManager,
+        IVetManagementService vetManagementService)
     {
         _shop = shop;
         _vet = vet;
@@ -48,9 +51,10 @@ public class AdminController : ControllerBase
         _user = user;
         _db = db;
         _userManager = userManager;
+        _vetManagementService = vetManagementService;
     }
 
-    // ---------- DASHBOARD ----------
+    //DASHBOARD
     [HttpGet("dashboard")]
     public async Task<IActionResult> Dashboard()
     {
@@ -122,7 +126,7 @@ public class AdminController : ControllerBase
         return Ok(ApiResponse<DashboardDto>.Ok(d));
     }
 
-    // ---------- SHOPS ----------
+    // SHOPS
     [HttpGet("shops")]
     public async Task<IActionResult> Shops([FromQuery] ApprovalStatus? status)
         => Ok(await _shop.GetAllAsync(status, null));
@@ -135,7 +139,7 @@ public class AdminController : ControllerBase
     }
 
 
-    // ---------- VETS ----------
+    //  VETS 
     [HttpGet("vets")]
     public async Task<IActionResult> Vets([FromQuery] ApprovalStatus? status)
         => Ok(await _vet.GetAllAsync(status, null, null));
@@ -147,7 +151,7 @@ public class AdminController : ControllerBase
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
-    // ---------- PETS ----------
+    // PETS
     [HttpGet("pets/pending")]
     public async Task<IActionResult> PendingPets([FromQuery] int page = 1, [FromQuery] int pageSize = 12)
         => Ok(await _pet.GetPendingAsync(page, pageSize));
@@ -159,7 +163,34 @@ public class AdminController : ControllerBase
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
-    // ---------- ADOPTED PETS ----------
+
+
+    [HttpGet("pets")]
+    public async Task<IActionResult> Pets(
+    [FromQuery] ApprovalStatus status
+)
+    {
+        var result = await _pet.GetAdminByStatusAsync(status);
+
+        return result.Success
+            ? Ok(result)
+            : BadRequest(result);
+    }
+
+
+
+
+    [HttpDelete("pets/{id:int}")]
+    public async Task<IActionResult> DeleteRejectedPet(int id)
+    {
+        var result = await _pet.AdminDeleteRejectedAsync(id);
+
+        return result.Success
+            ? Ok(result)
+            : BadRequest(result);
+    }
+
+    //ADOPTED PETS
     [HttpGet("pets/adopted")]
     public async Task<IActionResult> AdoptedPets()
     {
@@ -226,7 +257,7 @@ public class AdminController : ControllerBase
             return $"{m} ay";
         }
 
-        // 1) Təsdiqlənmiş müraciətlər
+        //Təsdiqlənmiş müraciətlər
         var approvedRequests = await _db.AdoptionRequests
             .AsNoTracking()
             .IgnoreQueryFilters()
@@ -246,8 +277,8 @@ public class AdminController : ControllerBase
                 g => g.OrderByDescending(x => x.UpdatedAt).First()
             );
 
-        // 2) Heç bir navigation Include etmirik.
-        // Category / OwnerUser / PetShop modeldə navigation olmaya bilər.
+        // Heç bir navigation Include etmirik.
+
         var pets = await _db.Pets
             .AsNoTracking()
             .IgnoreQueryFilters()
@@ -262,7 +293,7 @@ public class AdminController : ControllerBase
             .Distinct()
             .ToList();
 
-        // 3) Şəkillər ayrıca götürülür
+        //Şəkillər ayrıca götürülür
         var petImages = await _db.PetImages
             .AsNoTracking()
             .IgnoreQueryFilters()
@@ -275,7 +306,7 @@ public class AdminController : ControllerBase
             .Where(g => g.Key != 0)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        // 4) Kateqoriyalar ayrıca götürülür
+        //Kateqoriyalar ayrıca götürülür
         var categoryIds = pets
             .Select(p => I(p, "CategoryId"))
             .Where(x => x.HasValue)
@@ -289,7 +320,7 @@ public class AdminController : ControllerBase
             .Where(c => categoryIds.Contains(c.Id))
             .ToDictionaryAsync(c => c.Id, c => c.Name);
 
-        // 5) PetShop-lar ayrıca götürülür
+        // PetShop-lar ayrıca götürülür
         var petShopIds = pets
             .Select(p => I(p, "PetShopId"))
             .Where(x => x.HasValue)
@@ -303,7 +334,7 @@ public class AdminController : ControllerBase
             .Where(s => petShopIds.Contains(s.Id))
             .ToDictionaryAsync(s => s.Id, s => (object)s);
 
-        // 6) Yeni sahib: AdoptionRequests cədvəlində ApplicantUserId-dir
+        // Yeni sahib: AdoptionRequests cədvəlində ApplicantUserId-dir
         var applicantIds = approvedRequests
             .Select(r => I(r, "ApplicantUserId", "UserId", "CustomerUserId", "AdopterUserId"))
             .Where(x => x.HasValue)
@@ -311,7 +342,7 @@ public class AdminController : ControllerBase
             .Distinct()
             .ToList();
 
-        // 7) Əvvəlki sahib: Pets-də OwnerUserId ola bilər
+        // Əvvəlki sahib: Pets-də OwnerUserId ola bilər
         var previousOwnerIds = pets
             .Select(p => I(p, "OwnerUserId", "UserId"))
             .Where(x => x.HasValue)
@@ -457,7 +488,7 @@ public class AdminController : ControllerBase
 
 
 
-    // ---------- ADOPTION REQUESTS ----------
+    //ADOPTION REQUESTS
     [HttpGet("adoption-requests")]
     public async Task<IActionResult> AdoptionRequests()
     {
@@ -643,7 +674,8 @@ public class AdminController : ControllerBase
     }
 
 
-    // ---------- APPOINTMENTS ----------
+
+    // APPOINTMENTS
     [HttpGet("appointments")]
     public async Task<IActionResult> Appointments([FromQuery] AppointmentStatus? status, [FromQuery] DateTime? date)
     {
@@ -850,12 +882,20 @@ public class AdminController : ControllerBase
         return Ok(ApiResponse<object>.Ok(data));
     }
 
-    // ---------- ORDERS ----------
+
+
+
+
+
+    //  ORDERS 
     [HttpGet("orders")]
     public async Task<IActionResult> Orders([FromQuery] OrderStatus? status)
         => Ok(await _order.GetAllAsync(status));
 
-    // ---------- TESTIMONIALS ----------
+
+
+
+    //TESTIMONIALS
     [HttpGet("testimonials/pending")]
     public async Task<IActionResult> PendingTestimonials()
         => Ok(await _testimonial.GetPendingAsync());
@@ -867,10 +907,42 @@ public class AdminController : ControllerBase
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
-    // ---------- USERS ----------
+
+
+    [HttpGet("testimonials")]
+    public async Task<IActionResult> Testimonials(
+    [FromQuery] ApprovalStatus status
+)
+    {
+        var result = await _testimonial.GetAdminByStatusAsync(status);
+
+        return result.Success
+            ? Ok(result)
+            : BadRequest(result);
+    }
+
+
+
+
+    [HttpDelete("testimonials/{id:int}")]
+    public async Task<IActionResult> DeleteRejectedTestimonial(int id)
+    {
+        var result = await _testimonial.AdminDeleteRejectedAsync(id);
+
+        return result.Success
+            ? Ok(result)
+            : BadRequest(result);
+    }
+
+
+
+
+    //USERS 
     [HttpGet("users")]
     public async Task<IActionResult> Users([FromQuery] string? role, [FromQuery] string? search)
         => Ok(await _user.GetAllAsync(role, search));
+
+
 
     [HttpPut("users/{id:int}/active")]
     public async Task<IActionResult> SetActive(int id, [FromQuery] bool isActive)
@@ -879,7 +951,10 @@ public class AdminController : ControllerBase
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
-    // ---------- USER ROLE ----------
+
+
+
+    // USER ROLE
     [HttpPut("users/{id:int}/role")]
     [Authorize(Roles = Roles.SuperAdmin)]
     public async Task<IActionResult> SetRole(int id, [FromBody] SetRoleDto dto)
@@ -925,7 +1000,9 @@ public class AdminController : ControllerBase
         return Ok(ApiResponse<bool>.Ok(true, $"Rol dəyişdirildi: {dto.Role}"));
     }
 
-    // ---------- USER HARD DELETE ----------
+
+
+    // USER HARD DELETE
     [HttpDelete("users/{id:int}")]
     public async Task<IActionResult> DeleteUser(int id)
     {
@@ -950,6 +1027,9 @@ public class AdminController : ControllerBase
 
         try
         {
+            await DeleteUserChatsAsync(id);
+
+
             await DeleteDependentsOfAsync(userEntityType, id, new HashSet<string>());
 
             _db.Users.Remove(u);
@@ -968,7 +1048,9 @@ public class AdminController : ControllerBase
         }
     }
 
-    // ---------- HARD DELETE HELPERS ----------
+
+
+    // HARD DELETE HELPERS 
     private async Task DeleteDependentsOfAsync(
         IEntityType principalType,
         object? principalKeyValue,
@@ -1144,4 +1226,63 @@ public class AdminController : ControllerBase
 
         return null;
     }
+
+
+    private async Task DeleteUserChatsAsync(int userId)
+    {
+        var conversationIds = await _db.ChatParticipants
+            .IgnoreQueryFilters()
+            .Where(x => x.UserId == userId)
+            .Select(x => x.ConversationId)
+            .Distinct()
+            .ToListAsync();
+
+        if (!conversationIds.Any())
+            return;
+
+        var messages = await _db.ChatMessages
+            .IgnoreQueryFilters()
+            .Where(x => conversationIds.Contains(x.ConversationId))
+            .ToListAsync();
+
+        var participants = await _db.ChatParticipants
+            .IgnoreQueryFilters()
+            .Where(x => conversationIds.Contains(x.ConversationId))
+            .ToListAsync();
+
+        var conversations = await _db.ChatConversations
+            .IgnoreQueryFilters()
+            .Where(x => conversationIds.Contains(x.Id))
+            .ToListAsync();
+
+        _db.ChatMessages.RemoveRange(messages);
+        _db.ChatParticipants.RemoveRange(participants);
+        _db.ChatConversations.RemoveRange(conversations);
+
+        await _db.SaveChangesAsync();
+    }
+
+
+    [HttpDelete("shops/{id}")]
+    public async Task<IActionResult> DeleteRejectedShop(int id)
+    {
+        var result = await _shop.DeleteRejectedShopAsync(id);
+
+        return result.Success
+            ? Ok(result)
+            : BadRequest(result);
+    }
+
+    [HttpDelete("vets/{id}")]
+    [Authorize]
+    public async Task<IActionResult> DeleteRejectedVet(int id)
+    {
+        var result = await _vetManagementService.DeleteRejectedVetAsync(id);
+
+        return result.Success
+            ? Ok(result)
+            : BadRequest(result);
+    }
 }
+
+

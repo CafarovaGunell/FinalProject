@@ -1,4 +1,4 @@
-﻿// DTOs/User/UpdateProfileDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.User;

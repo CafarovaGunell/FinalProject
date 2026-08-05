@@ -1,7 +1,7 @@
-﻿// Models/Identity/Roles.cs
+﻿
 namespace ViViPaw.Models.Identity;
 
-/// <summary>Magic string işlətməmək üçün: [Authorize(Roles = Roles.Admin)]</summary>
+//Magic string işlətməmək üçün: [Authorize(Roles = Roles.Admin)]
 public static class Roles
 {
     public const string SuperAdmin = "SuperAdmin";

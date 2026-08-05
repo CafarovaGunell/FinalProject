@@ -1,4 +1,4 @@
-﻿// DTOs/Cart/AddToCartDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.Cart;

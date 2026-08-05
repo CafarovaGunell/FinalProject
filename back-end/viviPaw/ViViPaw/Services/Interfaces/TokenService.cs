@@ -1,4 +1,4 @@
-﻿// Services/TokenService.cs
+﻿
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -51,7 +51,7 @@ public class TokenService : ITokenService
         return Convert.ToBase64String(bytes);
     }
 
-    /// <summary>Müddəti bitmiş token-dən claim-ləri oxuyur (refresh üçün)</summary>
+    //Müddəti bitmiş token-dən claim-ləri oxuyur (refresh üçün)
     public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
     {
         var parameters = new TokenValidationParameters

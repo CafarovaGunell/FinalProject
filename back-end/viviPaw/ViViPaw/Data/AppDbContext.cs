@@ -1,9 +1,11 @@
-﻿// Data/AppDbContext.cs
+﻿
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using System.Reflection.Emit;
 using ViViPaw.Models.Adoption;
 using ViViPaw.Models.Base;
+using ViViPaw.Models.Chat;
 using ViViPaw.Models.Common;
 using ViViPaw.Models.Identity;
 using ViViPaw.Models.Shop;
@@ -43,6 +45,10 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
     public DbSet<CartItem> CartItems => Set<CartItem>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<ChatConversation> ChatConversations { get; set; }
+    public DbSet<ChatParticipant> ChatParticipants { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<ChatMessageDeletion> ChatMessageDeletions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -61,9 +67,9 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
             property.SetScale(2);
         }
 
-        // =========================
-        // 1-1 PROFİLLƏR
-        // =========================
+
+        // PROFİLLƏR
+ 
         b.Entity<PetShop>()
             .HasOne(x => x.AppUser).WithOne()
             .HasForeignKey<PetShop>(x => x.AppUserId)
@@ -79,9 +85,9 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
             .HasForeignKey<Cart>(x => x.AppUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // =========================
+
         // PET / ADOPTION
-        // =========================
+
         b.Entity<Pet>(e =>
         {
             e.HasOne(x => x.PetShop).WithMany(x => x.Pets)
@@ -117,7 +123,7 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
             e.HasIndex(x => new { x.PetId, x.ApplicantUserId }).IsUnique();
         });
 
-        // ★ WishList: heç bir tərəfdə Cascade yoxdur (conflict olmasın)
+        // WishList: heç bir tərəfdə Cascade yoxdur (conflict olmasın)
         b.Entity<WishList>(e =>
         {
             e.HasOne(x => x.Pet).WithMany(x => x.WishLists)
@@ -131,9 +137,8 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
             e.HasIndex(x => new { x.AppUserId, x.PetId }).IsUnique();
         });
 
-        // =========================
+
         // VET
-        // =========================
         b.Entity<VetService>()
             .HasOne(x => x.VeterinarianProfile).WithMany(x => x.Services)
             .HasForeignKey(x => x.VeterinarianProfileId)
@@ -165,7 +170,7 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
 
             e.HasOne(x => x.Pet).WithMany()
                 .HasForeignKey(x => x.PetId)
-                .OnDelete(DeleteBehavior.NoAction); // SetNull bəzən problem çıxarır
+                .OnDelete(DeleteBehavior.NoAction);
 
             e.HasIndex(x => new { x.VeterinarianProfileId, x.StartTime });
         });
@@ -180,9 +185,9 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
             .HasForeignKey(x => x.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // =========================
+
         // SHOP
-        // =========================
+
         b.Entity<Product>(e =>
         {
             e.HasOne(x => x.PetShop).WithMany(x => x.Products)
@@ -255,7 +260,7 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
             e.Ignore(x => x.LineTotal);
         });
 
-        // ★ FavoriteProduct: Cascade yox
+        //  FavoriteProduct: Cascade yox
         b.Entity<FavoriteProduct>(e =>
         {
             e.HasOne(x => x.AppUser).WithMany()
@@ -269,9 +274,9 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
             e.HasIndex(x => new { x.AppUserId, x.ProductId }).IsUnique();
         });
 
-        // =========================
+ 
         // COMMON
-        // =========================
+
         b.Entity<RefreshToken>()
             .HasOne(x => x.AppUser).WithMany(x => x.RefreshTokens)
             .HasForeignKey(x => x.AppUserId)
@@ -315,9 +320,6 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
             .OnDelete(DeleteBehavior.Restrict);
 
         // Soft-delete filter
-        // =========================
-        // GLOBAL SOFT-DELETE FİLTRİ
-        // =========================
         b.Entity<Pet>().HasQueryFilter(x => !x.IsDeleted);
         b.Entity<Product>().HasQueryFilter(x => !x.IsDeleted);
         b.Entity<PetShop>().HasQueryFilter(x => !x.IsDeleted);
@@ -326,7 +328,8 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
         b.Entity<Category>().HasQueryFilter(x => !x.IsDeleted);
         b.Entity<Order>().HasQueryFilter(x => !x.IsDeleted);
 
-        // ---- Filtri olan entity-lərə bağlı uşaqlara da eyni filtr ----
+ 
+
         b.Entity<PetImage>().HasQueryFilter(x => !x.IsDeleted && !x.Pet.IsDeleted);
         b.Entity<AdoptionRequest>().HasQueryFilter(x => !x.IsDeleted && !x.Pet.IsDeleted);
         b.Entity<WishList>().HasQueryFilter(x => !x.IsDeleted && !x.Pet.IsDeleted);
@@ -342,6 +345,80 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
         b.Entity<VetSchedule>().HasQueryFilter(x => !x.IsDeleted && !x.VeterinarianProfile.IsDeleted);
         b.Entity<VetTimeOff>().HasQueryFilter(x => !x.IsDeleted && !x.VeterinarianProfile.IsDeleted);
         b.Entity<VetAppointment>().HasQueryFilter(x => !x.IsDeleted && !x.VeterinarianProfile.IsDeleted);
+
+
+
+
+        //  CHAT
+        b.Entity<ChatConversation>(e =>
+        {
+            e.Property(x => x.Title).HasMaxLength(200);
+            e.Property(x => x.LastMessage).HasMaxLength(300);
+
+            e.HasIndex(x => x.Type);
+            e.HasIndex(x => x.LastMessageAt);
+            e.HasIndex(x => x.PetId);
+            e.HasIndex(x => x.ProductId);
+            e.HasIndex(x => x.OrderId);
+            e.HasIndex(x => x.AppointmentId);
+        });
+
+        b.Entity<ChatParticipant>(e =>
+        {
+            e.HasIndex(x => new { x.ConversationId, x.UserId }).IsUnique();
+            e.HasIndex(x => x.UserId);
+
+            e.HasOne(x => x.Conversation)
+                .WithMany(x => x.Participants)
+                .HasForeignKey(x => x.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<ChatMessage>(e =>
+        {
+            e.Property(x => x.Message).HasMaxLength(2000);
+            e.Property(x => x.AttachmentUrl).HasMaxLength(500);
+            e.Property(x => x.AttachmentType).HasMaxLength(50);
+
+            e.HasIndex(x => x.ConversationId);
+            e.HasIndex(x => x.SenderUserId);
+            e.HasIndex(x => x.CreatedAt);
+
+            e.HasOne(x => x.Conversation)
+                .WithMany(x => x.Messages)
+                .HasForeignKey(x => x.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(x => x.SenderUser)
+                .WithMany()
+                .HasForeignKey(x => x.SenderUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<ChatParticipant>(e =>
+        {
+            e.Property(x => x.ClearedAt).IsRequired(false);
+        });
+
+        b.Entity<ChatMessageDeletion>(e =>
+        {
+            e.HasIndex(x => new { x.MessageId, x.UserId }).IsUnique();
+
+            e.HasOne(x => x.Message)
+                .WithMany(x => x.DeletedForUsers)
+                .HasForeignKey(x => x.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 
 
@@ -358,3 +435,5 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
 
    
 }
+
+

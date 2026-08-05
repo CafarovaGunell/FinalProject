@@ -1,4 +1,4 @@
-﻿// Services/Interfaces/IAdoptionRequestService.cs
+﻿
 using ViViPaw.DTOs.Adoption;
 using ViViPaw.DTOs.Common;
 

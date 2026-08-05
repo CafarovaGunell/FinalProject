@@ -27,7 +27,7 @@ public class OrderService : IOrderService
         _notify = notify;
     }
 
-    // ---------- CHECKOUT ----------
+    // CHECKOUT 
     public async Task<ApiResponse<OrderGetDto>> CreateAsync(int userId, OrderCreateDto dto)
     {
         var cart = await _db.Carts
@@ -38,7 +38,7 @@ public class OrderService : IOrderService
         if (cart is null || !cart.Items.Any())
             return ApiResponse<OrderGetDto>.Fail("Səbətiniz boşdur.");
 
-        // Stok yoxlaması
+    
         foreach (var i in cart.Items)
         {
             if (!i.Product.IsActive)
@@ -78,7 +78,7 @@ public class OrderService : IOrderService
                 Quantity = i.Quantity
             });
 
-            i.Product.StockQuantity -= i.Quantity;   // stokdan çıx
+            i.Product.StockQuantity -= i.Quantity;   
         }
 
         order.SubTotal = subTotal;
@@ -86,7 +86,7 @@ public class OrderService : IOrderService
         order.TotalAmount = order.SubTotal + order.ShippingFee;
 
         _db.Orders.Add(order);
-        _db.CartItems.RemoveRange(cart.Items);      // səbəti boşalt
+        _db.CartItems.RemoveRange(cart.Items);     
         await _db.SaveChangesAsync();
         await tx.CommitAsync();
 
@@ -133,7 +133,7 @@ public class OrderService : IOrderService
         return ApiResponse<OrderGetDto>.Ok(dto);
     }
 
-    /// <summary>Mağazaya gələn sifarişlər</summary>
+    ///Mağazaya gələn sifarişlər
     public async Task<ApiResponse<List<OrderGetDto>>> GetShopOrdersAsync(int userId, OrderStatus? status)
     {
         var shopId = await _db.PetShops.Where(s => s.AppUserId == userId).Select(s => (int?)s.Id).FirstOrDefaultAsync();
@@ -159,7 +159,7 @@ public class OrderService : IOrderService
         return ApiResponse<List<OrderGetDto>>.Ok(list);
     }
 
-    // ---------- STATUS ----------
+    // STATUS
     public async Task<ApiResponse<string>> UpdateStatusAsync(int userId, bool isAdmin, int orderId, UpdateOrderStatusDto dto)
     {
         var order = await _db.Orders.Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == orderId);
@@ -175,7 +175,7 @@ public class OrderService : IOrderService
         if (order.Status is OrderStatus.Delivered or OrderStatus.Cancelled)
             return ApiResponse<string>.Fail("Bu sifarişin statusu artıq dəyişdirilə bilməz.");
 
-        // Ləğv → stoku geri qaytar
+        // Ləğv - stoku geri qaytar
         if (dto.Status == OrderStatus.Cancelled)
         {
             foreach (var i in order.Items)
@@ -196,7 +196,7 @@ public class OrderService : IOrderService
         return ApiResponse<string>.Ok("ok", "Status yeniləndi.");
     }
 
-    /// <summary>Müştəri öz sifarişini ləğv edir</summary>
+    /// Müştəri öz sifarişini ləğv edir
     public async Task<ApiResponse<string>> CancelAsync(int userId, int orderId, string? reason)
     {
         var order = await _db.Orders.Include(x => x.Items)

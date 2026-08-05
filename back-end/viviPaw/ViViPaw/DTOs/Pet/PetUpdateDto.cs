@@ -1,4 +1,4 @@
-﻿// DTOs/Pet/PetUpdateDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 using ViViPaw.Models.Enums;
 

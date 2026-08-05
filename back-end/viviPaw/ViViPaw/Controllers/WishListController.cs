@@ -18,7 +18,7 @@ public class WishListController : ControllerBase
     public async Task<IActionResult> MyList()
         => Ok(await _service.GetMyListAsync(User.GetUserId()));
 
-    /// <summary>Sadəcə ID-lər (ürək ikonu üçün)</summary>
+    //Sadəcə ID-lər (ürək ikonu üçün)
     [HttpGet("ids")]
     public async Task<IActionResult> Ids()
         => Ok(await _service.GetMyPetIdsAsync(User.GetUserId()));

@@ -1,4 +1,4 @@
-﻿// Models/Shop/Order.cs
+﻿
 using ViViPaw.Models.Base;
 using ViViPaw.Models.Enums;
 using ViViPaw.Models.Identity;

@@ -1,4 +1,4 @@
-﻿// Controllers/ArticleController.cs
+﻿
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ViViPaw.DTOs.Article;

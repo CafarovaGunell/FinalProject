@@ -15,7 +15,6 @@ const EMPTY = {
   brand: '', categoryId: '', targetAnimalCategoryId: '', isActive: true, imageUrls: [],
 };
 
-/* Siyahı obyektindən sürətli ilkin doldurma */
 const fromList = (p, prodCats, animalCats) => ({
   name: p.name || '', description: p.description || '',
   price: p.price ?? '', discountPrice: p.discountPrice ?? '',
@@ -37,7 +36,6 @@ const ProductModal = ({ product, prodCats, animalCats, onClose, onDone, showToas
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
-  /* ✅ REDAKTƏ: detail-dən TAM məlumatı çək */
   useEffect(() => {
     if (!product) return;
     let alive = true;
@@ -105,7 +103,7 @@ const ProductModal = ({ product, prodCats, animalCats, onClose, onDone, showToas
     };
     try {
       const res = product ? await productApi.update(product.id, payload) : await productApi.create(payload);
-      if (res?.success) onDone();
+      if (res?.success) onDone(payload.isActive, product?.id);
       else setErr(res?.message || 'Yadda saxlanmadı.');
     } catch (e2) { setErr(getError(e2, 'Yadda saxlanmadı.')); }
     finally { setSaving(false); }
@@ -161,7 +159,6 @@ const ProductModal = ({ product, prodCats, animalCats, onClose, onDone, showToas
             <span className="text-xs font-semibold text-slate-600">Satışda aktiv olsun</span>
           </label>
 
-          {/* ŞƏKİLLƏR */}
           <div className="space-y-2">
             <p className={labelCls}>Şəkillər</p>
             <div className="flex flex-wrap gap-2">
@@ -199,12 +196,29 @@ const ShopProducts = ({ showToast }) => {
   const [deleteId, setDeleteId] = useState(null);
   const [acting, setActing] = useState(null);
 
+  /* Hər məhsulun isActive dəyərini detail-dən yükləyib əlavə edirik */
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
       const res = await productApi.mine();
       const list = Array.isArray(res?.data) ? res.data : (res?.data?.items || []);
-      setProducts(list);
+
+      /* Hər məhsul üçün detail-dən isActive-i öyrən */
+      const enriched = await Promise.all(
+        list.map(async (p) => {
+          /* Əgər siyahıda isActive artıq varsa, istifadə et */
+          if (typeof p.isActive === 'boolean') return p;
+          try {
+            const detail = await productApi.byId(p.id);
+            if (detail?.success && detail.data) {
+              return { ...p, isActive: detail.data.isActive !== false };
+            }
+          } catch {}
+          return { ...p, isActive: true }; /* fallback */
+        })
+      );
+
+      setProducts(enriched);
     } catch { setProducts([]); }
     finally { setLoading(false); }
   }, []);
@@ -232,12 +246,22 @@ const ShopProducts = ({ showToast }) => {
     return <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-600">Stok: {s}</span>;
   };
 
+  const handleDone = (isActive, productId) => {
+    /* Redaktə edildikdə lokal state-i dərhal yenilə */
+    if (productId) {
+      setProducts((prev) => prev.map((p) => p.id === productId ? { ...p, isActive } : p));
+    }
+    setModal(null);
+    showToast(productId ? '✅ Məhsul yeniləndi' : '✅ Məhsul yaradıldı');
+    fetchList();
+  };
+
   return (
     <div className="space-y-4">
       {modal && (
         <ProductModal product={modal.product} prodCats={prodCats} animalCats={animalCats}
           onClose={() => setModal(null)} showToast={showToast}
-          onDone={() => { setModal(null); showToast(modal.product ? '✅ Məhsul yeniləndi' : '✅ Məhsul yaradıldı'); fetchList(); }} />
+          onDone={handleDone} />
       )}
 
       <div className="flex justify-end">
@@ -259,9 +283,13 @@ const ShopProducts = ({ showToast }) => {
             <div key={p.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md transition">
               <div className="relative">
                 <img src={p.mainImageUrl || PLACEHOLDER_PRODUCT} alt={p.name} className="w-full h-36 object-cover bg-slate-100" />
-                {!p.isActive && (
-                  <span className="absolute top-2 left-2 bg-slate-900/80 text-white text-[10px] font-bold px-2 py-1 rounded-lg">Deaktiv</span>
-                )}
+                <span className={`absolute top-2 left-2 text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-sm ${
+                  p.isActive
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-900/80 text-white'
+                }`}>
+                  {p.isActive ? 'Aktiv' : 'Deaktiv'}
+                </span>
               </div>
               <div className="p-4 space-y-2">
                 <div className="flex items-center justify-between gap-2">

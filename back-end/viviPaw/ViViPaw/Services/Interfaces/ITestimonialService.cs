@@ -1,6 +1,7 @@
-﻿// Services/Interfaces/ITestimonialService.cs
+﻿
 using ViViPaw.DTOs.Common;
 using ViViPaw.DTOs.Testimonial;
+using ViViPaw.Models.Enums;
 
 namespace ViViPaw.Services.Interfaces;
 
@@ -13,4 +14,13 @@ public interface ITestimonialService
     Task<ApiResponse<string>> ToggleLikeAsync(int userId, int testimonialId);
     Task<ApiResponse<string>> ApproveAsync(int id, bool approve);
     Task<ApiResponse<string>> DeleteAsync(int userId, bool isAdmin, int id);
+
+
+    Task<ApiResponse<List<TestimonialGetDto>>> GetAdminByStatusAsync(
+    ApprovalStatus status
+);
+
+    Task<ApiResponse<string>> AdminDeleteRejectedAsync(int id);
 }
+
+

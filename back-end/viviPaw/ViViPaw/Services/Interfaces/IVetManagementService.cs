@@ -1,4 +1,4 @@
-﻿// Services/Interfaces/IVetManagementService.cs
+﻿
 using ViViPaw.DTOs.Common;
 using ViViPaw.DTOs.Vet;
 
@@ -21,4 +21,7 @@ public interface IVetManagementService
     Task<ApiResponse<List<VetTimeOffGetDto>>> GetTimeOffsAsync(int userId);
     Task<ApiResponse<VetTimeOffGetDto>> CreateTimeOffAsync(int userId, VetTimeOffCreateDto dto);
     Task<ApiResponse<string>> DeleteTimeOffAsync(int userId, int id);
+
+
+    Task<ApiResponse<string>> DeleteRejectedVetAsync(int vetId);
 }

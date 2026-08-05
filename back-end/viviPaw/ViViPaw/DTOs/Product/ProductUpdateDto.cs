@@ -1,4 +1,4 @@
-﻿// DTOs/Product/ProductUpdateDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.Product;

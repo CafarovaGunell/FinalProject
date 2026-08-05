@@ -1,4 +1,4 @@
-﻿// Models/Common/PetCareArticle.cs
+﻿
 using ViViPaw.Models.Base;
 using ViViPaw.Models.Vet;
 

@@ -301,7 +301,21 @@ const MyPets = () => {
                 <div><label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Ünvan</label>
                   <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className={inputCls} /></div>
                 <div><label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Əlaqə telefonu</label>
-                  <input value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} className={inputCls} /></div>
+  <input
+    value={form.contactPhone}
+    onChange={(e) => {
+      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+      setForm({ ...form, contactPhone: val });
+    }}
+    inputMode="numeric"
+    maxLength={10}
+    placeholder="0501234567"
+    className={inputCls}
+  />
+  <p className={`text-[10px] font-semibold mt-0.5 ${form.contactPhone.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+    {form.contactPhone.length}/10 rəqəm
+  </p>
+</div>
               </div>
 
               <div><label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Sağlamlıq qeydi</label>
@@ -408,3 +422,5 @@ const MyPets = () => {
 };
 
 export default MyPets;
+
+

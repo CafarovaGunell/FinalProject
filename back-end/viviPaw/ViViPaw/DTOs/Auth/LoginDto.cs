@@ -1,4 +1,4 @@
-﻿// DTOs/Auth/LoginDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.Auth;

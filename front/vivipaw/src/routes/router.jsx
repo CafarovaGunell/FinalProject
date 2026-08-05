@@ -20,6 +20,7 @@ import MyRequests from '../home/pages/myrequests';
 import Notifications from '../home/pages/notifications';
 import Testimonials from '../home/pages/testimonials';
 import MyPets from '../home/pages/mypets';
+import Messages from '../home/pages/Messages';
 
 /* ── Admin panel ── */
 import AdminLayout from '../home/pages/admin/AdminLayout';
@@ -38,7 +39,7 @@ import AdminArticles from '../home/pages/admin/AdminArticles';
 import AdminAllPets from '../home/pages/admin/AdminAllPets';
 import AdminAdoptionRequests from '../home/pages/admin/AdminAdoptionRequests';
 import AdminAppointments from '../home/pages/admin/AdminAppointments';
-import AdminSettings from '../home/pages/admin/AdminSettings';
+
 
 export const router = createBrowserRouter([
   /* ── ƏSAS SAYT (home layout) ── */
@@ -66,6 +67,7 @@ export const router = createBrowserRouter([
       { element: <ProtectedRoute><MyRequests /></ProtectedRoute>, path: 'my-requests' },
       { element: <ProtectedRoute><Notifications /></ProtectedRoute>, path: 'notifications' },
       { element: <ProtectedRoute><MyPets /></ProtectedRoute>, path: 'my-pets' },
+      { element: <ProtectedRoute><Messages /></ProtectedRoute>, path: '/messages' },
     ],
   },
 
@@ -93,7 +95,7 @@ export const router = createBrowserRouter([
       { path: 'articles', element: <AdminArticles /> },
       { path: 'adoption-requests', element: <AdminAdoptionRequests /> },
       { path: 'appointments', element: <AdminAppointments /> },
-      { path: 'settings', element: <AdminSettings /> },
+    
     ],
   },
 ]);

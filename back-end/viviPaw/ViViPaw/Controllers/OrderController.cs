@@ -17,7 +17,7 @@ public class OrderController : ControllerBase
     private readonly IOrderService _service;
     public OrderController(IOrderService service) => _service = service;
 
-    /// <summary>Səbətdən sifariş yarat</summary>
+    //Səbətdən sifariş yarat
     [HttpPost("checkout")]
     public async Task<IActionResult> Checkout([FromBody] OrderCreateDto dto)
     {
@@ -37,13 +37,20 @@ public class OrderController : ControllerBase
         return r.Success ? Ok(r) : NotFound(r);
     }
 
-    /// <summary>Mağazaya gələn sifarişlər</summary>
+
+
+
+
+
     [HttpGet("shop-orders")]
     [Authorize(Roles = Roles.PetShop)]
     public async Task<IActionResult> ShopOrders([FromQuery] OrderStatus? status)
         => Ok(await _service.GetShopOrdersAsync(User.GetUserId(), status));
 
-    /// <summary>Status dəyiş (PetShop / Admin)</summary>
+
+
+
+    //Status dəyiş 
     [HttpPut("{id:int}/status")]
     [Authorize(Roles = $"{Roles.PetShop},{Roles.Admin},{Roles.SuperAdmin}")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusDto dto)
@@ -53,7 +60,7 @@ public class OrderController : ControllerBase
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
-    /// <summary>Müştəri ləğvi</summary>
+  //Müştəri ləğvi
     [HttpPut("{id:int}/cancel")]
     public async Task<IActionResult> Cancel(int id, [FromQuery] string? reason)
     {

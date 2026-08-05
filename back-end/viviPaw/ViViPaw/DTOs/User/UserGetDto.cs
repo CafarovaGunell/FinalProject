@@ -1,4 +1,4 @@
-﻿// DTOs/User/UserGetDto.cs
+﻿
 namespace ViViPaw.DTOs.User;
 
 public class UserGetDto

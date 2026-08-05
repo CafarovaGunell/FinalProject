@@ -1,4 +1,4 @@
-﻿// Models/Shop/ProductImage.cs
+﻿
 using ViViPaw.Models.Base;
 
 namespace ViViPaw.Models.Shop;

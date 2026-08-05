@@ -1,4 +1,4 @@
-﻿// DTOs/Adoption/AdoptionRequestGetDto.cs
+﻿
 using ViViPaw.Models.Enums;
 
 namespace ViViPaw.DTOs.Adoption;

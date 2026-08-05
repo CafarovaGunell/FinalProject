@@ -1,4 +1,4 @@
-﻿// DTOs/PetShop/PetShopUpdateDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.PetShop;

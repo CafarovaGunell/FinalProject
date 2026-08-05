@@ -15,8 +15,8 @@ public class VetManagementController : ControllerBase
     private readonly IVetManagementService _service;
     public VetManagementController(IVetManagementService service) => _service = service;
 
-    // ---------- XİDMƏTLƏR ----------
-    /// <summary>Baytarın xidmətləri (public)</summary>
+    // XİDMƏTLƏR 
+
     [HttpGet("{vetProfileId:int}/services")]
     [AllowAnonymous]
     public async Task<IActionResult> Services(int vetProfileId)
@@ -46,14 +46,17 @@ public class VetManagementController : ControllerBase
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
-    // ---------- QRAFİK ----------
-    /// <summary>Baytarın həftəlik qrafiki (public)</summary>
+    // QraFik
+
     [HttpGet("{vetProfileId:int}/schedules")]
     [AllowAnonymous]
     public async Task<IActionResult> Schedules(int vetProfileId)
         => Ok(await _service.GetSchedulesAsync(vetProfileId));
 
-    /// <summary>Qrafik əlavə/yenilə (eyni gün varsa əvəz olunur)</summary>
+
+
+
+    //Qrafik əlavə/yenilə (eyni gün varsa əvəz olunur)
     [HttpPost("schedules")]
     [Authorize(Roles = Roles.Veterinarian)]
     public async Task<IActionResult> CreateSchedule([FromBody] VetScheduleCreateDto dto)
@@ -70,7 +73,10 @@ public class VetManagementController : ControllerBase
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
-    // ---------- MƏZUNİYYƏT ----------
+
+
+
+    // MƏZUNİYYƏT 
     [HttpGet("time-offs")]
     [Authorize(Roles = Roles.Veterinarian)]
     public async Task<IActionResult> TimeOffs()

@@ -1,4 +1,4 @@
-﻿// DTOs/Auth/RefreshTokenDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.Auth;

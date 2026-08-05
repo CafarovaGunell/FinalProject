@@ -1,4 +1,4 @@
-﻿// DTOs/Order/OrderCreateDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.Order;

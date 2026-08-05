@@ -1,4 +1,4 @@
-﻿// Models/Shop/OrderItem.cs
+﻿
 using ViViPaw.Models.Base;
 
 namespace ViViPaw.Models.Shop;
@@ -14,7 +14,7 @@ public class OrderItem : BaseEntity
     public int PetShopId { get; set; }              // hansı mağaza satıb (panel üçün)
     public PetShop PetShop { get; set; } = null!;
 
-    // SNAPSHOT — məhsul sonra dəyişsə/silinsə belə sifariş qorunur
+    // SNAPSHOT 
     public string ProductName { get; set; } = string.Empty;
     public string? ProductImageUrl { get; set; }
     public decimal UnitPrice { get; set; }

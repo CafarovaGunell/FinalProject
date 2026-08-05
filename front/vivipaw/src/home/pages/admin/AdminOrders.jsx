@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   LuMapPin, LuUser, LuSearch, LuStore, LuPhone, LuMail, LuCalendar,
-  LuPackage, LuCreditCard, LuTruck, LuFileText, LuEye, LuLock,
+  LuPackage, LuCreditCard, LuTruck, LuFileText, LuEye, LuLock, LuTrash2,
 } from 'react-icons/lu';
 import { adminApi } from '../../../services/endpoints';
 import { ORDER_STATUS_TEXT, ORDER_STATUS_COLOR } from '../../../utils/constants';
@@ -13,13 +13,13 @@ const STATUS_FILTER = [
   ...Object.entries(ORDER_STATUS_TEXT).map(([v, l]) => ({ v: Number(v), l })),
 ];
 
-/* tarix: DTO-da adı fərqli ola bilər → hamısını yoxla, olmasa dateText-i parse et */
 const orderDate = (o) => {
   const raw = o?.orderDate || o?.createdAt || o?.createdDate || o?.date;
   if (raw) { const d = new Date(raw); if (!isNaN(d)) return d; }
   const m = String(o?.dateText || '').match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
   return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
 };
+
 const toInput = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
@@ -37,22 +37,22 @@ const AdminOrders = () => {
   const [status, setStatus] = useState('');
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [detail, setDetail] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
     const res = await adminApi.orders(status === '' ? undefined : status).catch(() => null);
-    setList(listFrom(res));
+    const hidden = JSON.parse(localStorage.getItem('hiddenAdminOrderIds') || '[]');
+    setList(listFrom(res).filter((o) => !hidden.includes(String(o.id))));
     setLoading(false);
   }, [status]);
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
-  /* ✅ axtarış + tarix aralığı: tam client-side, yazdıqca işləyir */
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const f = from ? new Date(new Date(from).setHours(0, 0, 0, 0)) : null;
@@ -77,7 +77,21 @@ const AdminOrders = () => {
     setTo(toInput(n));
     setFrom(toInput(new Date(n.getFullYear(), n.getMonth(), n.getDate() - days)));
   };
-  const clearAll = () => { setSearch(''); setFrom(''); setTo(''); setStatus(''); };
+
+  const clearAll = () => {
+    setSearch(''); setFrom(''); setTo(''); setStatus('');
+    localStorage.removeItem('hiddenAdminOrderIds');
+    fetchList();
+  };
+
+  const removeOrder = (o) => {
+    const id = String(o.id);
+    const prev = JSON.parse(localStorage.getItem('hiddenAdminOrderIds') || '[]');
+    localStorage.setItem('hiddenAdminOrderIds', JSON.stringify([...new Set([...prev, id])]));
+    setList((p) => p.filter((x) => String(x.id) !== id));
+    setDeleteId(null);
+    setDetail(null);
+  };
 
   const items = detail ? (detail.items || detail.orderItems || detail.orderDetails || []) : [];
   const shops = [...new Set([detail?.petShopName, ...items.map((i) => i.petShopName || i.shopName)].filter(Boolean))];
@@ -86,7 +100,7 @@ const AdminOrders = () => {
     <div>
       <PageHeader
         title="Sifarişlər"
-        subtitle={`${filtered.length} / ${list.length} sifariş • yalnız baxış — idarəetmə mağazadadır`}
+        subtitle={`${filtered.length} / ${list.length} sifariş`}
       >
         <select value={status} onChange={(e) => setStatus(e.target.value)}
           className="bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-sky-500 cursor-pointer">
@@ -94,7 +108,6 @@ const AdminOrders = () => {
         </select>
       </PageHeader>
 
-      {/* ---- FİLTRLƏR ---- */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-5 space-y-3">
         <div className="flex flex-col lg:flex-row gap-3">
           <div className="relative flex-1">
@@ -164,7 +177,6 @@ const AdminOrders = () => {
                     <td className="px-5 py-3.5 font-black text-slate-900">{formatPrice(o.totalAmount)}</td>
                     <td className="px-5 py-3.5 text-slate-500 font-semibold text-xs hidden sm:table-cell">{o.dateText}</td>
                     <td className="px-5 py-3.5 text-right">
-                      {/* ✅ Yalnız oxunur badge */}
                       <Badge className={ORDER_STATUS_COLOR[o.status] || 'bg-slate-100 text-slate-600 border-slate-200'}>
                         {o.statusText || ORDER_STATUS_TEXT[o.status] || '—'}
                       </Badge>
@@ -180,8 +192,7 @@ const AdminOrders = () => {
         </div>
       )}
 
-      {/* ---- DETAL VƏRƏQİ (read-only) ---- */}
-      <Modal open={!!detail} onClose={() => setDetail(null)} title={`Sifariş ${detail?.orderNumber || ''}`}>
+      <Modal open={!!detail} onClose={() => { setDetail(null); setDeleteId(null); }} title={`Sifariş ${detail?.orderNumber || ''}`}>
         {detail && (
           <div className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-4">
@@ -261,9 +272,28 @@ const AdminOrders = () => {
               </div>
             )}
 
-            <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 justify-center">
-              <LuLock size={12} /> Sifariş yalnız mağaza tərəfindən idarə olunur
-            </p>
+            <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+              <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+                <LuLock size={12} /> Sifariş yalnız mağaza tərəfindən idarə olunur
+              </p>
+              {deleteId === detail.id ? (
+                <div className="flex gap-2">
+                  <button onClick={() => removeOrder(detail)}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition">
+                    Bəli, sil
+                  </button>
+                  <button onClick={() => setDeleteId(null)}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                    Geri
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setDeleteId(detail.id)}
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition">
+                  <LuTrash2 size={13} /> Siyahıdan sil
+                </button>
+              )}
+            </div>
           </div>
         )}
       </Modal>

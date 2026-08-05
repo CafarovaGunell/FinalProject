@@ -1,4 +1,4 @@
-﻿// DTOs/Product/ProductCreateDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.Product;
@@ -29,4 +29,4 @@ public class ProductCreateDto
 
     public List<string> ImageUrls { get; set; } = new();
 }
-// PetShopId YOXDUR → JWT-dən gəlir
+// PetShopId YOXDUR  JWT-dən gəlir

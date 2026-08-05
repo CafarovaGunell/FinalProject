@@ -1,4 +1,4 @@
-﻿// DTOs/Pet/PetCreateDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 using ViViPaw.Models.Enums;
 
@@ -39,11 +39,11 @@ public class PetCreateDto
     [Required, Phone]
     public string ContactPhone { get; set; } = string.Empty;
 
-    /// <summary>Yalnız Customer elanı üçün</summary>
+  
     public string? ReasonToGiveAway { get; set; }
 
     public bool IsUrgent { get; set; } = false;
 
-    /// <summary>Şəkil URL-ləri (əvvəl upload olunub, URL gəlir)</summary>
+    //Şəkil URL-ləri 
     public List<string> ImageUrls { get; set; } = new();
 }

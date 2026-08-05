@@ -11,6 +11,7 @@ import {
   LuX,
   LuHeartHandshake,
   LuShieldCheck,
+  LuTrash2,
 } from 'react-icons/lu';
 import { adminApi } from '../../../services/endpoints';
 import { PLACEHOLDER_PET } from '../../../utils/constants';
@@ -74,17 +75,29 @@ const AdminAdoptedPets = () => {
   const [to, setTo] = useState('');
 
   const [detail, setDetail] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
     const res = await adminApi.adoptedPets().catch(() => null);
-    setList(listFrom(res));
+    const hidden = JSON.parse(localStorage.getItem('hiddenAdoptedPetIds') || '[]');
+setList(listFrom(res).filter((x) => !hidden.includes(String(x.petId || x.id))));
     setLoading(false);
   }, []);
 
   useEffect(() => {
     fetchList();
   }, [fetchList]);
+
+
+  const removeItem = (x) => {
+  const id = String(x.petId || x.id);
+  const prev = JSON.parse(localStorage.getItem('hiddenAdoptedPetIds') || '[]');
+  localStorage.setItem('hiddenAdoptedPetIds', JSON.stringify([...new Set([...prev, id])]));
+  setList((p) => p.filter((item) => String(item.petId || item.id) !== id));
+  setDeleteId(null);
+  setDetail(null);
+};
 
   const cities = useMemo(() => {
     return [...new Set(list.map((x) => x.city).filter(Boolean))];
@@ -362,10 +375,30 @@ const AdminAdoptedPets = () => {
                   <p className="text-xs font-black text-slate-900 mb-2">Sağlamlıq qeydləri / səbəb</p>
                   <p className="text-sm font-semibold text-slate-600 leading-relaxed">
                     {detail.healthNotes || detail.reasonToGiveAway || 'Qeyd yoxdur.'}
-                  </p>
+                  </p>                 
                 </div>
+                              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                {deleteId === (detail.petId || detail.id) ? (
+                  <div className="flex gap-2">
+                    <button onClick={() => removeItem(detail)}
+                      className="text-xs font-bold px-3 py-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition">
+                      Bəli, sil
+                    </button>
+                    <button onClick={() => setDeleteId(null)}
+                      className="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                      Geri
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setDeleteId(detail.petId || detail.id)}
+                    className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition">
+                    <LuTrash2 size={13} /> Siyahıdan sil
+                  </button>
+                )}
+              </div>
               </div>
             </div>
+            
           </div>
         )}
       </WideModal>

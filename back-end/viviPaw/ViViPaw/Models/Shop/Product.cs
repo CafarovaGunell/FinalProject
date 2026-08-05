@@ -1,4 +1,4 @@
-﻿// Models/Shop/Product.cs
+﻿
 using ViViPaw.Models.Base;
 using ViViPaw.Models.Common;
 
@@ -6,13 +6,13 @@ namespace ViViPaw.Models.Shop;
 
 public class Product : BaseEntity
 {
-    public int PetShopId { get; set; }                  // artıq MƏCBURİ
+    public int PetShopId { get; set; }                 
     public PetShop PetShop { get; set; } = null!;
 
     public int CategoryId { get; set; }                 // Yem, Oyuncaq, Aksesuar (Type = Product)
     public Category Category { get; set; } = null!;
 
-    /// <summary>Hansı heyvan üçün — Category (Type = Pet): İt, Pişik...</summary>
+    //Hansı heyvan üçün — Category (Type = Pet): İt, Pişik
     public int? TargetAnimalCategoryId { get; set; }
     public Category? TargetAnimalCategory { get; set; }
 

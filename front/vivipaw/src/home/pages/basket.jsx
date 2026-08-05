@@ -84,7 +84,20 @@ const CheckoutModal = ({ subTotal, onClose, onSuccess }) => {
             </div>
             <div className="space-y-1">
               <label className={labelCls}>Telefon *</label>
-              <input value={form.shippingPhone} onChange={(e) => setForm({ ...form, shippingPhone: e.target.value })} placeholder="0501234567" className={inputCls} />
+              <input
+  value={form.shippingPhone}
+  onChange={(e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setForm({ ...form, shippingPhone: val });
+  }}
+  inputMode="numeric"
+  placeholder="0501234567"
+  maxLength={10}
+  className={inputCls}
+/>
+<p className={`text-[10px] font-semibold mt-0.5 ${form.shippingPhone.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+  {form.shippingPhone.length}/10 rəqəm
+</p>
             </div>
           </div>
 

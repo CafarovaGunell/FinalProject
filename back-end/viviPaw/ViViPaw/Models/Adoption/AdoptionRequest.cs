@@ -1,4 +1,4 @@
-﻿// Models/Adoption/AdoptionRequest.cs
+﻿
 using ViViPaw.Models.Base;
 using ViViPaw.Models.Enums;
 using ViViPaw.Models.Identity;
@@ -21,7 +21,7 @@ public class AdoptionRequest : BaseEntity
     public bool HasOtherPets { get; set; }
     public string Reason { get; set; } = string.Empty;
 
-    // --- Cavab ---
+    //Cavab
     public RequestStatus Status { get; set; } = RequestStatus.Pending;
     public string? ReviewNote { get; set; }
     public DateTime? ReviewedAt { get; set; }

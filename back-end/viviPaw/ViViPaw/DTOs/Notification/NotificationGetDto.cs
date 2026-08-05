@@ -1,4 +1,4 @@
-﻿// DTOs/Notification/NotificationGetDto.cs
+﻿
 using ViViPaw.Models.Enums;
 
 namespace ViViPaw.DTOs.Notification;

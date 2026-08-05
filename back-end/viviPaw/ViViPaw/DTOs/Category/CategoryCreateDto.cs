@@ -1,4 +1,4 @@
-﻿// DTOs/Category/CategoryCreateDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 using ViViPaw.Models.Enums;
 

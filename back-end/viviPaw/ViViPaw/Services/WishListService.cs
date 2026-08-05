@@ -1,4 +1,4 @@
-﻿// Services/WishListService.cs
+﻿
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +32,6 @@ public class WishListService : IWishListService
         return ApiResponse<List<WishListPetDto>>.Ok(list);
     }
 
-    /// <summary>Varsa silir, yoxdursa əlavə edir</summary>
     public async Task<ApiResponse<string>> ToggleAsync(int userId, int petId)
     {
         if (!await _db.Pets.AnyAsync(x => x.Id == petId))
@@ -52,7 +51,6 @@ public class WishListService : IWishListService
         return ApiResponse<string>.Ok("added", "Sevimlilərə əlavə edildi.");
     }
 
-    /// <summary>Frontend-də ürək ikonunu doldurmaq üçün</summary>
     public async Task<ApiResponse<List<int>>> GetMyPetIdsAsync(int userId)
     {
         var ids = await _db.WishLists.Where(x => x.AppUserId == userId)

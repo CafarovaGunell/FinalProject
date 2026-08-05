@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Search, MapPin, Store, Plus, Sparkles, PackageX, Tag, PawPrint,
+  Search, MapPin, Store, Plus, Sparkles, PackageX, Tag, PawPrint, X,
 } from 'lucide-react';
 import { productApi, categoryApi } from '../../services/endpoints';
 import { getError } from '../../services/api';
@@ -42,10 +42,9 @@ const Shop = () => {
   const [animals, setAnimals]   = useState([]);
   const [loading, setLoading]   = useState(true);
 
-  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [cat, setCat]       = useState('');
-  const [animal, setAnimal] = useState('');   // ✅ heyvan kateqoriyası filtri
+  const [animal, setAnimal] = useState('');
   const [sort, setSort]     = useState('newest');
 
   const [authModal, setAuthModal] = useState(false);
@@ -70,9 +69,8 @@ const Shop = () => {
     setLoading(true);
     try {
       const params = { pageSize: 100, sortBy: sort };
-      if (search) params.search = search;
       if (cat)    params.categoryId = cat;
-      if (animal) params.targetAnimalCategoryId = animal; // ✅ server dəstəkləyirsə orada filtrlənir
+      if (animal) params.targetAnimalCategoryId = animal;
 
       const res = await productApi.list(params);
       if (res?.success) {
@@ -85,18 +83,41 @@ const Shop = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, cat, sort, animal]);
+  }, [cat, sort, animal]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  /* ✅ Client-side backup filtr (server dəstəkləməsə belə işləyir) */
-  const filtered = useMemo(() => products.filter((p) => {
-    if (!animal) return true;
-    const sel = animals.find((a) => String(a.id) === animal);
-    return String(getAnimalId(p)) === animal || (sel && getAnimal(p) === sel.name);
-  }), [products, animal, animals]);
+  /* Client-side filter: search + animal */
+  const filtered = useMemo(() => {
+    let list = products;
 
-  const handleSearch = (e) => { e.preventDefault(); setSearch(searchInput.trim()); };
+    // Animal filter (backup)
+    if (animal) {
+      const sel = animals.find((a) => String(a.id) === animal);
+      list = list.filter((p) =>
+        String(getAnimalId(p)) === animal || (sel && getAnimal(p) === sel.name)
+      );
+    }
+
+    // Search filter — yazdıqca süzür
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter((p) =>
+        [
+          p.name,
+          p.brand,
+          p.description,
+          p.category,
+          getShop(p),
+          getCity(p),
+          getCat(p),
+          getAnimal(p),
+        ].some((x) => (x || '').toLowerCase().includes(q))
+      );
+    }
+
+    return list;
+  }, [products, animal, animals, search]);
 
   const handleAdd = async (e, p) => {
     e.preventDefault(); e.stopPropagation();
@@ -143,16 +164,25 @@ const Shop = () => {
         {/* FİLTRLƏR */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
           <div className="flex flex-col sm:flex-row gap-3">
-            <form onSubmit={handleSearch} className="relative flex-1">
-              <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Məhsul, brend axtar..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-20 py-2.5 text-sm font-semibold focus:outline-none focus:border-sky-500 focus:bg-white transition" />
-              <button type="submit"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-sky-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-sky-700 transition">
-                Axtar
-              </button>
-            </form>
+            {/* Yazdıqca süzülən axtarış */}
+            <div className="relative flex-1">
+              <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Məhsul, brend, mağaza və ya şəhər axtar..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-10 py-2.5 text-sm font-semibold focus:outline-none focus:border-sky-500 focus:bg-white transition"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
 
             <select value={sort} onChange={(e) => setSort(e.target.value)}
               className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-sky-500 cursor-pointer">
@@ -170,7 +200,7 @@ const Shop = () => {
             ))}
           </div>
 
-          {/* ✅ HEYVAN KATEQORİYASI ÇİPLƏRİ (icon-lu) */}
+          {/* HEYVAN KATEQORİYASI ÇİPLƏRİ */}
           {animals.length > 0 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
               <span className="text-[11px] font-bold text-slate-400 shrink-0 flex items-center gap-1 pr-1">
@@ -192,6 +222,7 @@ const Shop = () => {
         {!loading && (
           <p className="text-xs text-slate-500 font-semibold px-1">
             <span className="text-sky-600 font-bold">{filtered.length}</span> məhsul tapıldı
+            {search.trim() ? <span className="text-slate-400"> · "{search.trim()}"</span> : ''}
           </p>
         )}
 
@@ -204,6 +235,15 @@ const Shop = () => {
           <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center">
             <PackageX className="mx-auto text-slate-300 mb-3" size={40} />
             <p className="text-sm font-semibold text-slate-600">Axtarışa uyğun məhsul tapılmadı.</p>
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="mt-4 text-xs font-bold text-sky-600 hover:underline"
+              >
+                Axtarışı təmizlə
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">

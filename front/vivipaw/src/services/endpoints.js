@@ -181,6 +181,54 @@ export const adminApi = {
 appointments: (status, date) =>
   u(API.get('/Admin/appointments', { params: { status, date } })),
 
+deleteShop: (id) => u(API.delete(`/Admin/shops/${id}`)),
+deleteVet: (id) => u(API.delete(`/Admin/vets/${id}`)),
+
+pets: (status, page = 1, pageSize = 60) =>
+  u(API.get('/Admin/pets', {
+    params: { status, page, pageSize },
+  })),
+
+deletePet: (id) =>
+  u(API.delete(`/Admin/pets/${id}`)),
+
+testimonials: (status) =>
+  u(API.get('/Admin/testimonials', {
+    params: { status },
+  })),
+
+deleteTestimonial: (id) =>
+  u(API.delete(`/Admin/testimonials/${id}`)),
+
+};
+
+
+export const chatApi = {
+  conversations: () =>
+    u(API.get('/chat/conversations')),
+
+  start: (d) =>
+    u(API.post('/chat/start', d)),
+
+  messages: (conversationId, page = 1, pageSize = 50) =>
+    u(API.get(`/chat/conversations/${conversationId}/messages`, {
+      params: { page, pageSize },
+    })),
+
+  send: (conversationId, d) =>
+    u(API.post(`/chat/conversations/${conversationId}/messages`, d)),
+
+  read: (conversationId) =>
+    u(API.put(`/chat/conversations/${conversationId}/read`)),
+
+  deleteConversation: (conversationId) =>
+    u(API.delete(`/chat/conversations/${conversationId}`)),
+
+  deleteMessageForMe: (messageId) =>
+    u(API.delete(`/chat/messages/${messageId}/me`)),
+
+  deleteMessageForEveryone: (messageId) =>
+    u(API.delete(`/chat/messages/${messageId}/everyone`)),
 };
 
 

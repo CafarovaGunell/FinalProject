@@ -5,6 +5,9 @@ import {
   Search, FileText, Home, ArrowRight, Stethoscope, Store,
 } from 'lucide-react';
 
+import StartChatButton from '../components/chat/StartChatButton';
+import { CHAT_TYPE } from '../../utils/chat';
+
 const STATS = [
   { value: '500+', label: 'Tapılan yuva', icon: Home },
   { value: '40+', label: 'Təsdiqli mağaza', icon: Store },
@@ -112,6 +115,13 @@ const About = () => (
           <Link to="/register" className="bg-blue-700/40 border border-white/30 text-white font-bold px-8 py-4 rounded-2xl text-sm hover:bg-blue-700/60 transition backdrop-blur">
             Qeydiyyatdan Keç
           </Link>
+          <StartChatButton
+  type={CHAT_TYPE.SUPPORT}
+  initialMessage="Salam, dəstək lazımdır."
+  className="bg-white/20 border border-white/30 text-white backdrop-blur px-8 py-4 rounded-2xl text-sm hover:bg-white/30"
+>
+  Dəstəyə yaz
+</StartChatButton>
         </div>
       </div>
     </section>
@@ -119,3 +129,7 @@ const About = () => (
 );
 
 export default About;
+
+
+
+

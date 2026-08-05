@@ -1,4 +1,4 @@
-﻿// Models/Adoption/PetImage.cs
+﻿
 using ViViPaw.Models.Base;
 
 namespace ViViPaw.Models.Adoption;

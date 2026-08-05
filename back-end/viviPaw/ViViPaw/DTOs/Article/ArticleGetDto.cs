@@ -1,4 +1,4 @@
-﻿// DTOs/Article/ArticleGetDto.cs
+﻿
 namespace ViViPaw.DTOs.Article;
 
 public class ArticleGetDto

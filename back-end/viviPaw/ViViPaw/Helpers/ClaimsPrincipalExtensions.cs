@@ -1,11 +1,11 @@
-﻿// Helpers/ClaimsPrincipalExtensions.cs
+﻿
 using System.Security.Claims;
 
 namespace ViViPaw.Helpers;
 
 public static class ClaimsPrincipalExtensions
 {
-    /// <summary>Cari istifadəçinin Id-si. Tapılmasa -1.</summary>
+    //Cari istifadəçinin Id-si   Tapılmasa -1
     public static int GetUserId(this ClaimsPrincipal user)
     {
         var id = user.FindFirstValue(ClaimTypes.NameIdentifier);

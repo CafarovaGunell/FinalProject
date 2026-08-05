@@ -1,4 +1,4 @@
-﻿// DTOs/Order/OrderGetDto.cs
+﻿
 using ViViPaw.Models.Enums;
 
 namespace ViViPaw.DTOs.Order;

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   LuSearch,
   LuPackage,
@@ -13,9 +13,93 @@ import {
 } from 'react-icons/lu';
 import { productApi, categoryApi } from '../../../services/endpoints';
 import { getError } from '../../../services/api';
-import { CATEGORY_TYPE, PLACEHOLDER_PRODUCT } from '../../../utils/constants';
+import {
+  CATEGORY_TYPE,
+  PLACEHOLDER_PRODUCT,
+} from '../../../utils/constants';
 import { formatPrice, formatDate } from '../../../utils/helpers';
-import { PageHeader, EmptyBox, Spinner, Badge, Modal, listFrom } from '../../components/admin/ui';
+import {
+  PageHeader,
+  EmptyBox,
+  Spinner,
+  Modal,
+  listFrom,
+} from '../../components/admin/ui';
+
+/* ───── DTO field-lərini təhlükəsiz oxumaq üçün ───── */
+const getValue = (obj, keys, fallback = null) => {
+  for (const key of keys) {
+    if (obj?.[key] !== undefined && obj?.[key] !== null) {
+      return obj[key];
+    }
+  }
+  return fallback;
+};
+
+const normalizeText = (value) =>
+  String(value || '').trim().toLocaleLowerCase('az-AZ');
+
+const getCategoryId = (product) =>
+  getValue(
+    product,
+    ['categoryId', 'productCategoryId'],
+    product?.category?.id ?? null
+  );
+
+const getCategoryName = (product) =>
+  getValue(
+    product,
+    ['categoryName', 'productCategoryName'],
+    product?.category?.name ?? ''
+  );
+
+const getAnimalName = (product) =>
+  getValue(
+    product,
+    [
+      'targetAnimalName',
+      'targetAnimalCategoryName',
+      'targetCategoryName',
+    ],
+    product?.targetAnimalCategory?.name ?? ''
+  );
+
+const getShopName = (product) =>
+  getValue(
+    product,
+    ['petShopName', 'shopName'],
+    product?.petShop?.name ?? ''
+  );
+
+const getStock = (product) =>
+  Number(
+    getValue(
+      product,
+      ['stockQuantity', 'stock', 'quantity'],
+      0
+    )
+  ) || 0;
+
+const getMainImage = (product) =>
+  getValue(
+    product,
+    ['mainImageUrl', 'imageUrl'],
+    product?.images?.[0]?.imageUrl ?? PLACEHOLDER_PRODUCT
+  );
+
+const getFinalPrice = (product) =>
+  product?.finalPrice ??
+  product?.discountPrice ??
+  product?.price ??
+  0;
+
+const getImages = (product) => {
+  const images = product?.images || product?.imageUrls || [];
+
+  return images
+    .map((image) => image?.imageUrl || image?.url || image)
+    .filter(Boolean);
+};
 
 const WideModal = ({ open, onClose, title, children }) => {
   if (!open) return null;
@@ -31,6 +115,7 @@ const WideModal = ({ open, onClose, title, children }) => {
       >
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
           <h3 className="font-black text-slate-900">{title}</h3>
+
           <button
             onClick={onClose}
             className="p-2 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
@@ -64,109 +149,158 @@ const Info = ({ icon: Icon, label, value }) => (
 const AdminProducts = () => {
   const [list, setList] = useState([]);
   const [categories, setCategories] = useState([]);
-
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState('');
 
   const [search, setSearch] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [stockF, setStockF] = useState('');
-  const [activeF, setActiveF] = useState('');
+  const [stockFilter, setStockFilter] = useState('');
 
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const [confirmDel, setConfirmDel] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [toast, setToast] = useState('');
 
-  const showToast = (m) => {
-    setToast(m);
+  const showToast = (message) => {
+    setToast(message);
     setTimeout(() => setToast(''), 2600);
   };
 
   const fetchList = useCallback(async () => {
     setLoading(true);
 
-    const [productsRes, catsRes] = await Promise.all([
-      productApi.list({ page: 1, pageSize: 500 }).catch(() => null),
-      categoryApi.all(CATEGORY_TYPE.PRODUCT).catch(() => null),
-    ]);
+    try {
+      const [productsResponse, categoriesResponse] = await Promise.all([
+        productApi.list({ page: 1, pageSize: 500 }).catch(() => null),
+        categoryApi.all(CATEGORY_TYPE.PRODUCT).catch(() => null),
+      ]);
 
-    setList(listFrom(productsRes));
-    setCategories(listFrom(catsRes));
-
-    setLoading(false);
+      setList(listFrom(productsResponse));
+      setCategories(listFrom(categoriesResponse));
+    } catch {
+      setList([]);
+      setCategories([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     fetchList();
   }, [fetchList]);
 
+  /* Axtarış + kateqoriya + stok filteri */
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const query = normalizeText(search);
 
-    return list.filter((p) => {
-      const hay = [
-        p.name,
-        p.brand,
-        p.categoryName,
-        p.targetAnimalName,
-        p.petShopName,
-      ].filter(Boolean).join(' ').toLowerCase();
+    const selectedCategory = categories.find(
+      (category) => String(category.id) === String(categoryId)
+    );
 
-      if (q && !hay.includes(q)) return false;
-      if (categoryId && String(p.categoryId) !== String(categoryId)) return false;
+    const selectedCategoryName = normalizeText(selectedCategory?.name);
 
-      if (stockF === 'in' && !p.inStock) return false;
-      if (stockF === 'out' && p.inStock) return false;
+    return list.filter((product) => {
+      const stock = getStock(product);
+      const productCategoryId = getCategoryId(product);
+      const productCategoryName = normalizeText(getCategoryName(product));
 
-      if (activeF === 'active' && !p.isActive) return false;
-      if (activeF === 'inactive' && p.isActive) return false;
+      const searchText = normalizeText(
+        [
+          product.name,
+          product.brand,
+          getCategoryName(product),
+          getAnimalName(product),
+          getShopName(product),
+          product.description,
+        ]
+          .filter(Boolean)
+          .join(' ')
+      );
 
-      return true;
+      const matchesSearch = !query || searchText.includes(query);
+
+      const matchesCategory =
+        !categoryId ||
+        String(productCategoryId) === String(categoryId) ||
+        productCategoryName === selectedCategoryName;
+
+      const matchesStock =
+        !stockFilter ||
+        (stockFilter === 'in' && stock > 0) ||
+        (stockFilter === 'out' && stock <= 0);
+
+      return matchesSearch && matchesCategory && matchesStock;
     });
-  }, [list, search, categoryId, stockF, activeF]);
+  }, [list, categories, search, categoryId, stockFilter]);
 
-  const openDetail = async (p) => {
-    setDetail(p);
+  const clearFilters = () => {
+    setSearch('');
+    setCategoryId('');
+    setStockFilter('');
+  };
+
+  const openDetail = async (product) => {
+    setDetail(product);
     setDetailLoading(true);
 
-    const res = await productApi.byId(p.id).catch(() => null);
+    try {
+      const response = await productApi.byId(product.id);
 
-    if (res?.success && res.data) {
-      setDetail({ ...p, ...res.data });
+      if (response?.success && response.data) {
+        setDetail((previous) => ({
+          ...previous,
+          ...response.data,
+        }));
+      }
+    } catch {
+      // Siyahıdakı məlumatlarla modal açıq qalır.
+    } finally {
+      setDetailLoading(false);
     }
-
-    setDetailLoading(false);
   };
 
-  const doDelete = async () => {
-    if (!confirmDel) return;
+  const deleteProduct = async () => {
+    if (!confirmDelete) return;
 
-    setBusy(true);
+    setDeleteBusy(true);
 
-    const res = await productApi.remove(confirmDel.id)
-      .catch((e) => ({ success: false, message: getError(e) }));
+    try {
+      const response = await productApi.remove(confirmDelete.id);
 
-    if (res?.success) {
-      setList((l) => l.filter((x) => x.id !== confirmDel.id));
-      if (detail?.id === confirmDel.id) setDetail(null);
-      setConfirmDel(null);
-      showToast('🗑️ Məhsul silindi');
-    } else {
-      showToast(res?.message || 'Məhsul silinmədi');
+      if (response?.success) {
+        setList((previous) =>
+          previous.filter(
+            (product) => String(product.id) !== String(confirmDelete.id)
+          )
+        );
+
+        if (
+          detail &&
+          String(detail.id) === String(confirmDelete.id)
+        ) {
+          setDetail(null);
+        }
+
+        setConfirmDelete(null);
+        showToast('🗑️ Məhsul silindi');
+      } else {
+        showToast(response?.message || 'Məhsul silinə bilmədi.');
+      }
+    } catch (error) {
+      showToast(getError(error, 'Məhsul silinə bilmədi.'));
+    } finally {
+      setDeleteBusy(false);
     }
-
-    setBusy(false);
   };
 
-  const imgs = detail
-    ? (detail.images || detail.imageUrls || [])
-        .map((i) => i?.imageUrl || i)
-        .filter(Boolean)
-    : [];
+  const detailImages = getImages(detail);
+  const detailMainImage =
+    getMainImage(detail) ||
+    detailImages[0] ||
+    PLACEHOLDER_PRODUCT;
 
-  const mainImg = detail?.mainImageUrl || detail?.imageUrl || imgs[0] || PLACEHOLDER_PRODUCT;
+  const detailStock = getStock(detail);
 
   return (
     <div>
@@ -181,16 +315,18 @@ const AdminProducts = () => {
         </div>
       )}
 
+      {/* FİLTRLƏR */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-5 flex flex-col lg:flex-row gap-3">
         <div className="relative flex-1">
           <LuSearch
             size={16}
             className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
           />
+
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Məhsul, marka, mağaza, kateqoriya axtar..."
+            placeholder="Məhsul, marka, mağaza, kateqoriya və heyvan növü axtar..."
             className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 text-sm font-semibold focus:outline-none focus:border-sky-500"
           />
         </div>
@@ -201,14 +337,17 @@ const AdminProducts = () => {
           className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-sky-500 cursor-pointer"
         >
           <option value="">Bütün kateqoriyalar</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+
+          {categories.map((category) => (
+            <option key={category.id} value={String(category.id)}>
+              {category.name}
+            </option>
           ))}
         </select>
 
         <select
-          value={stockF}
-          onChange={(e) => setStockF(e.target.value)}
+          value={stockFilter}
+          onChange={(e) => setStockFilter(e.target.value)}
           className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-sky-500 cursor-pointer"
         >
           <option value="">Stok: hamısı</option>
@@ -216,15 +355,14 @@ const AdminProducts = () => {
           <option value="out">Stok yoxdur</option>
         </select>
 
-        <select
-          value={activeF}
-          onChange={(e) => setActiveF(e.target.value)}
-          className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-sky-500 cursor-pointer"
-        >
-          <option value="">Status: hamısı</option>
-          <option value="active">Aktiv</option>
-          <option value="inactive">Passiv</option>
-        </select>
+        {(search || categoryId || stockFilter) && (
+          <button
+            onClick={clearFilters}
+            className="px-4 py-2.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition"
+          >
+            Sıfırla
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -237,7 +375,7 @@ const AdminProducts = () => {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyBox text="Məhsul tapılmadı." />
+        <EmptyBox text="Bu filterlərə uyğun məhsul tapılmadı." />
       ) : (
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
@@ -249,111 +387,115 @@ const AdminProducts = () => {
                   <th className="px-5 py-3.5">Qiymət</th>
                   <th className="px-5 py-3.5 hidden md:table-cell">Stok</th>
                   <th className="px-5 py-3.5 hidden sm:table-cell">Reytinq</th>
-                  <th className="px-5 py-3.5 text-right">Status</th>
-                  <th className="px-5 py-3.5 text-right w-20">Əməl.</th>
+                  <th className="px-5 py-3.5 text-right w-20">Əməliyyat</th>
                 </tr>
               </thead>
 
               <tbody>
-                {filtered.map((p) => (
-                  <tr
-                    key={p.id}
-                    onClick={() => openDetail(p)}
-                    className="border-b border-slate-50 last:border-0 hover:bg-sky-50/50 transition cursor-pointer group"
-                  >
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={p.mainImageUrl || PLACEHOLDER_PRODUCT}
-                          alt={p.name}
-                          className="w-11 h-11 rounded-xl object-cover border border-slate-200 shrink-0"
-                        />
-                        <div>
-                          <p className="font-black text-slate-900 group-hover:text-sky-600">
-                            {p.name}
-                          </p>
-                          <p className="text-[11px] font-semibold text-slate-400">
-                            {p.brand || '—'} • {p.categoryName || '—'}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
+                {filtered.map((product) => {
+                  const stock = getStock(product);
 
-                    <td className="px-5 py-3.5 hidden lg:table-cell">
-                      <p className="font-bold text-slate-600 flex items-center gap-1.5">
-                        <LuStore size={13} />
-                        {p.petShopName || '—'}
-                      </p>
-                    </td>
-
-                    <td className="px-5 py-3.5">
-                      <p className="font-black text-slate-900">
-                        {formatPrice(p.finalPrice ?? p.discountPrice ?? p.price)}
-                      </p>
-                      {p.discountPrice != null && (
-                        <p className="text-[11px] text-slate-400 line-through font-semibold">
-                          {formatPrice(p.price)}
-                        </p>
-                      )}
-                    </td>
-
-                    <td className="px-5 py-3.5 hidden md:table-cell">
-                      <p className="font-bold text-slate-600">
-                        {p.stockQuantity ?? 0}
-                      </p>
-                    </td>
-
-                    <td className="px-5 py-3.5 hidden sm:table-cell">
-                      <p className="font-bold text-slate-600 flex items-center gap-1">
-                        <LuStar size={13} className="text-amber-400" />
-                        {p.averageRating ?? 0}
-                        <span className="text-[11px] text-slate-400">
-                          ({p.reviewCount ?? 0})
-                        </span>
-                      </p>
-                    </td>
-
-                    <td className="px-5 py-3.5 text-right">
-                      <Badge
-                        className={
-                          p.isActive
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-slate-100 text-slate-500 border-slate-200'
-                        }
-                      >
-                        {p.isActive ? 'Aktiv' : 'Passiv'}
-                      </Badge>
-                    </td>
-
-                    <td
-                      className="px-5 py-3.5 text-right"
-                      onClick={(e) => e.stopPropagation()}
+                  return (
+                    <tr
+                      key={product.id}
+                      onClick={() => openDetail(product)}
+                      className="border-b border-slate-50 last:border-0 hover:bg-sky-50/50 transition cursor-pointer group"
                     >
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => openDetail(p)}
-                          title="Ətraflı"
-                          className="p-2 rounded-lg text-slate-400 hover:bg-sky-50 hover:text-sky-600 transition"
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={getMainImage(product)}
+                            alt={product.name}
+                            className="w-11 h-11 rounded-xl object-cover border border-slate-200 shrink-0"
+                          />
+
+                          <div>
+                            <p className="font-black text-slate-900 group-hover:text-sky-600">
+                              {product.name}
+                            </p>
+
+                            <p className="text-[11px] font-semibold text-slate-400">
+                              {product.brand || '—'} •{' '}
+                              {getCategoryName(product) || '—'}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-3.5 hidden lg:table-cell">
+                        <p className="font-bold text-slate-600 flex items-center gap-1.5">
+                          <LuStore size={13} />
+                          {getShopName(product) || '—'}
+                        </p>
+                      </td>
+
+                      <td className="px-5 py-3.5">
+                        <p className="font-black text-slate-900">
+                          {formatPrice(getFinalPrice(product))}
+                        </p>
+
+                        {product.discountPrice != null && (
+                          <p className="text-[11px] text-slate-400 line-through font-semibold">
+                            {formatPrice(product.price)}
+                          </p>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-3.5 hidden md:table-cell">
+                        <p
+                          className={`font-bold ${
+                            stock > 0
+                              ? 'text-slate-600'
+                              : 'text-rose-600'
+                          }`}
                         >
-                          <LuEye size={15} />
-                        </button>
-                        <button
-                          onClick={() => setConfirmDel(p)}
-                          title="Sil"
-                          className="p-2 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
-                        >
-                          <LuTrash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {stock}
+                        </p>
+                      </td>
+
+                      <td className="px-5 py-3.5 hidden sm:table-cell">
+                        <p className="font-bold text-slate-600 flex items-center gap-1">
+                          <LuStar size={13} className="text-amber-400" />
+                          {product.averageRating ?? 0}
+
+                          <span className="text-[11px] text-slate-400">
+                            ({product.reviewCount ?? 0})
+                          </span>
+                        </p>
+                      </td>
+
+                      <td
+                        className="px-5 py-3.5 text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => openDetail(product)}
+                            title="Ətraflı bax"
+                            className="p-2 rounded-lg text-slate-400 hover:bg-sky-50 hover:text-sky-600 transition"
+                          >
+                            <LuEye size={15} />
+                          </button>
+
+                          <button
+                            onClick={() => setConfirmDelete(product)}
+                            title="Məhsulu sil"
+                            className="p-2 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+                          >
+                            <LuTrash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
+      {/* MƏHSUL DETALI */}
       <WideModal
         open={!!detail}
         onClose={() => setDetail(null)}
@@ -367,31 +509,20 @@ const AdminProducts = () => {
           <div className="grid lg:grid-cols-[380px_1fr] gap-6">
             <div className="space-y-3">
               <img
-                src={mainImg}
+                src={detailMainImage}
                 alt={detail.name}
                 className="w-full aspect-square rounded-3xl object-cover border border-slate-200 bg-slate-50"
               />
-
-              {imgs.length > 1 && (
-                <div className="grid grid-cols-5 gap-2">
-                  {[mainImg, ...imgs.filter((x) => x !== mainImg)].slice(0, 10).map((img, i) => (
-                    <img
-                      key={`${img}-${i}`}
-                      src={img}
-                      alt=""
-                      className="aspect-square rounded-xl object-cover border border-slate-200"
-                    />
-                  ))}
-                </div>
-              )}
 
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
                   Qiymət
                 </p>
+
                 <p className="text-3xl font-black text-slate-900">
-                  {formatPrice(detail.finalPrice ?? detail.discountPrice ?? detail.price)}
+                  {formatPrice(getFinalPrice(detail))}
                 </p>
+
                 {detail.discountPrice != null && (
                   <p className="text-sm text-slate-400 line-through font-bold">
                     {formatPrice(detail.price)}
@@ -402,9 +533,13 @@ const AdminProducts = () => {
 
             <div className="space-y-5">
               <div>
-                <h2 className="text-2xl font-black text-slate-900">{detail.name}</h2>
-                <p className="text-sm font-semibold text-slate-500">
-                  {detail.brand || 'Marka yoxdur'} • {detail.categoryName || 'Kateqoriya yoxdur'}
+                <h2 className="text-2xl font-black text-slate-900">
+                  {detail.name}
+                </h2>
+
+                <p className="text-sm font-semibold text-slate-500 mt-1">
+                  {detail.brand || 'Marka yoxdur'} •{' '}
+                  {getCategoryName(detail) || 'Kateqoriya yoxdur'}
                 </p>
               </div>
 
@@ -414,10 +549,34 @@ const AdminProducts = () => {
                     <LuPackage size={14} />
                     Məhsul
                   </p>
-                  <Info icon={LuBoxes} label="Stok" value={detail.stockQuantity ?? 0} />
-                  <Info icon={LuBadgePercent} label="Endirimli qiymət" value={detail.discountPrice != null ? formatPrice(detail.discountPrice) : 'Yoxdur'} />
-                  <Info icon={LuPackage} label="Hədəf heyvan" value={detail.targetAnimalName} />
-                  <Info icon={LuStar} label="Reytinq" value={`${detail.averageRating ?? 0} (${detail.reviewCount ?? 0} rəy)`} />
+
+                  <Info
+                    icon={LuBoxes}
+                    label="Stok"
+                    value={detailStock}
+                  />
+
+                  <Info
+                    icon={LuBadgePercent}
+                    label="Endirimli qiymət"
+                    value={
+                      detail.discountPrice != null
+                        ? formatPrice(detail.discountPrice)
+                        : 'Yoxdur'
+                    }
+                  />
+
+                  <Info
+                    icon={LuPackage}
+                    label="Hədəf heyvan"
+                    value={getAnimalName(detail)}
+                  />
+
+                  <Info
+                    icon={LuStar}
+                    label="Reytinq"
+                    value={`${detail.averageRating ?? 0} (${detail.reviewCount ?? 0} rəy)`}
+                  />
                 </div>
 
                 <div className="border border-slate-200 rounded-2xl p-4 space-y-3">
@@ -425,10 +584,34 @@ const AdminProducts = () => {
                     <LuStore size={14} />
                     Mağaza
                   </p>
-                  <Info icon={LuStore} label="Mağaza adı" value={detail.petShopName} />
-                  <Info icon={LuPackage} label="Məhsul ID" value={detail.id} />
-                  <Info icon={LuPackage} label="Mağaza ID" value={detail.petShopId} />
-                  <Info icon={LuPackage} label="Yaradılıb" value={detail.createdAt ? formatDate(detail.createdAt) : '—'} />
+
+                  <Info
+                    icon={LuStore}
+                    label="Mağaza adı"
+                    value={getShopName(detail)}
+                  />
+
+                  <Info
+                    icon={LuPackage}
+                    label="Məhsul ID"
+                    value={detail.id}
+                  />
+
+                  <Info
+                    icon={LuPackage}
+                    label="Mağaza ID"
+                    value={detail.petShopId}
+                  />
+
+                  <Info
+                    icon={LuPackage}
+                    label="Yaradılıb"
+                    value={
+                      detail.createdAt
+                        ? formatDate(detail.createdAt)
+                        : '—'
+                    }
+                  />
                 </div>
               </div>
 
@@ -436,22 +619,29 @@ const AdminProducts = () => {
                 <p className="text-xs font-black text-slate-900 mb-2">
                   Təsvir
                 </p>
+
                 <p className="text-sm font-semibold text-slate-600 leading-relaxed whitespace-pre-wrap">
                   {detail.description || 'Təsvir yoxdur.'}
                 </p>
               </div>
 
-              {imgs.length > 0 && (
+              {detailImages.length > 0 && (
                 <div className="border border-slate-200 rounded-2xl p-4">
                   <p className="text-xs font-black text-slate-900 flex items-center gap-1.5 mb-3">
                     <LuImage size={14} />
                     Şəkillər
                   </p>
+
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {[mainImg, ...imgs.filter((x) => x !== mainImg)].map((img, i) => (
+                    {[
+                      detailMainImage,
+                      ...detailImages.filter(
+                        (image) => image !== detailMainImage
+                      ),
+                    ].map((image, index) => (
                       <img
-                        key={`${img}-${i}`}
-                        src={img}
+                        key={`${image}-${index}`}
+                        src={image}
                         alt=""
                         className="aspect-square rounded-2xl object-cover border border-slate-200"
                       />
@@ -462,7 +652,7 @@ const AdminProducts = () => {
 
               <div className="flex justify-end">
                 <button
-                  onClick={() => setConfirmDel(detail)}
+                  onClick={() => setConfirmDelete(detail)}
                   className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
                 >
                   <LuTrash2 size={14} />
@@ -474,31 +664,37 @@ const AdminProducts = () => {
         ) : null}
       </WideModal>
 
+      {/* SİLMƏ TƏSDİQ MODALI */}
       <Modal
-        open={!!confirmDel}
-        onClose={() => setConfirmDel(null)}
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
         title="Məhsulu sil"
       >
         <p className="text-sm font-semibold text-slate-600">
           <span className="font-black text-slate-900">
-            {confirmDel?.name}
-          </span>{' '}
-          silinəcək. Bu əməliyyat geri qaytarıla bilməz.
+            {confirmDelete?.name}
+          </span>
+          {' '}məhsulunu silmək istəyirsiniz?
+        </p>
+
+        <p className="text-xs text-rose-600 font-semibold mt-2">
+          Bu əməliyyat geri qaytarıla bilməz.
         </p>
 
         <div className="flex justify-end gap-2 mt-5">
           <button
-            onClick={() => setConfirmDel(null)}
+            onClick={() => setConfirmDelete(null)}
             className="text-xs font-bold px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
           >
             İmtina
           </button>
+
           <button
-            onClick={doDelete}
-            disabled={busy}
+            onClick={deleteProduct}
+            disabled={deleteBusy}
             className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl bg-rose-600 text-white hover:bg-rose-700 transition disabled:opacity-50"
           >
-            {busy ? <Spinner small /> : <LuTrash2 size={14} />}
+            {deleteBusy ? <Spinner small /> : <LuTrash2 size={14} />}
             Bəli, sil
           </button>
         </div>

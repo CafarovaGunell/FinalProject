@@ -6,45 +6,78 @@ import {
   LuPawPrint,
   LuMessageSquare,
   LuUsers,
-  LuPackage,
   LuWalletCards,
-  LuTrendingUp,
   LuHeart,
   LuClipboardList,
-  LuCalendarCheck,
-  LuNewspaper,
-  LuShoppingCart,
 } from 'react-icons/lu';
 import { adminApi } from '../../../services/endpoints';
 import { formatPrice } from '../../../utils/helpers';
 import { PageHeader, StatCard, listFrom } from '../../components/admin/ui';
 
-const pick = (d, keys, fallback = 0) => {
-  for (const k of keys) {
-    if (d?.[k] !== undefined && d?.[k] !== null) return d[k];
+const ORDER_DELIVERED = 5;
+const APPOINTMENT_COMPLETED = 3;
+
+const num = (value) => Number(value ?? 0) || 0;
+
+const pick = (data, keys, fallback = 0) => {
+  for (const key of keys) {
+    if (data?.[key] !== undefined && data?.[key] !== null) {
+      return data[key];
+    }
   }
+
   return fallback;
 };
 
-const num = (v) => Number(v ?? 0) || 0;
+const orderAmount = (order) =>
+  num(
+    order?.totalAmount ??
+    order?.total ??
+    order?.amount ??
+    order?.price
+  );
 
-const APPOINTMENT_COMPLETED = 3;
+const appointmentAmount = (appointment) =>
+  num(
+    appointment?.priceSnapshot ??
+    appointment?.servicePrice ??
+    appointment?.price ??
+    appointment?.totalPrice
+  );
 
-const appointmentAmount = (a) =>
-  num(a?.priceSnapshot ?? a?.servicePrice ?? a?.price ?? a?.totalPrice);
+const isDeliveredOrder = (order) => {
+  const text = String(order?.statusText || '').toLowerCase();
 
-const isCompletedAppointment = (a) => {
-  const text = String(a?.statusText || '').toLowerCase();
-  return Number(a?.status) === APPOINTMENT_COMPLETED ||
+  return (
+    Number(order?.status) === ORDER_DELIVERED ||
+    text.includes('delivered') ||
+    text.includes('çatdırıldı') ||
+    text.includes('çatdır')
+  );
+};
+
+const isCompletedAppointment = (appointment) => {
+  const text = String(appointment?.statusText || '').toLowerCase();
+
+  return (
+    Number(appointment?.status) === APPOINTMENT_COMPLETED ||
     text.includes('completed') ||
-    text.includes('tamam');
+    text.includes('tamamlandı') ||
+    text.includes('tamam')
+  );
 };
 
 const Dashboard = () => {
-  const nav = useNavigate();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState(null);
+
+  const [dashboardStats, setDashboardStats] = useState({});
+  const [orders, setOrders] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [adoptionRequests, setAdoptionRequests] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [adoptedPets, setAdoptedPets] = useState([]);
 
   const [pending, setPending] = useState({
     shops: 0,
@@ -53,109 +86,148 @@ const Dashboard = () => {
     testimonials: 0,
   });
 
-  const [appointments, setAppointments] = useState([]);
-  const [adoptedList, setAdoptedList] = useState([]);
-
   useEffect(() => {
-    (async () => {
-      const [d, s, v, p, t, appts, adopted] = await Promise.all([
-        adminApi.dashboard().catch(() => null),
-        adminApi.shops(1).catch(() => null),
-        adminApi.vets(1).catch(() => null),
-        adminApi.pendingPets(1, 60).catch(() => null),
-        adminApi.pendingTestimonials().catch(() => null),
-        adminApi.appointments?.().catch(() => null),
-        adminApi.adoptedPets?.().catch(() => null),
-      ]);
+    const loadDashboard = async () => {
+      setLoading(true);
 
-      setStats(d?.success ? d.data : null);
+      try {
+        const [
+          dashboardResponse,
+          pendingShopsResponse,
+          pendingVetsResponse,
+          pendingPetsResponse,
+          pendingTestimonialsResponse,
+          ordersResponse,
+          appointmentsResponse,
+          adoptionRequestsResponse,
+          usersResponse,
+          adoptedPetsResponse,
+        ] = await Promise.all([
+          adminApi.dashboard().catch(() => null),
 
-      setPending({
-        shops: listFrom(s).length,
-        vets: listFrom(v).length,
-        pets: listFrom(p).length,
-        testimonials: listFrom(t).length,
-      });
+          /* Pending status = 1 */
+          adminApi.shops(1).catch(() => null),
+          adminApi.vets(1).catch(() => null),
+          adminApi.pendingPets(1, 100).catch(() => null),
+          adminApi.pendingTestimonials().catch(() => null),
 
-      setAppointments(listFrom(appts));
-      setAdoptedList(listFrom(adopted));
+          /* Gəlir və ümumi statistikalar */
+          adminApi.orders().catch(() => null),
+          adminApi.appointments?.().catch(() => null),
+          adminApi.adoptionRequests?.().catch(() => null),
+          adminApi.users?.().catch(() => null),
+          adminApi.adoptedPets?.().catch(() => null),
+        ]);
 
-      setLoading(false);
-    })();
+        setDashboardStats(
+          dashboardResponse?.success
+            ? dashboardResponse.data || {}
+            : {}
+        );
+
+        setPending({
+          shops: listFrom(pendingShopsResponse).length,
+          vets: listFrom(pendingVetsResponse).length,
+          pets: listFrom(pendingPetsResponse).length,
+          testimonials: listFrom(pendingTestimonialsResponse).length,
+        });
+
+        setOrders(listFrom(ordersResponse));
+        setAppointments(listFrom(appointmentsResponse));
+        setAdoptionRequests(listFrom(adoptionRequestsResponse));
+        setUsers(listFrom(usersResponse));
+        setAdoptedPets(listFrom(adoptedPetsResponse));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
   }, []);
 
-  const d = stats || {};
+  /* Yalnız çatdırılan sifarişlərin cəmi */
+  const shopRevenue = useMemo(() => {
+    return orders
+      .filter(isDeliveredOrder)
+      .reduce((sum, order) => sum + orderAmount(order), 0);
+  }, [orders]);
 
-  const totalUsers = pick(d, ['totalUsers', 'TotalUsers', 'userCount', 'users']);
-  const totalOrders = pick(d, ['totalOrders', 'TotalOrders', 'orderCount', 'orders']);
-  const totalProducts = pick(d, ['totalProducts', 'TotalProducts', 'productCount', 'products']);
-
-  // Backend-də bu yalnız Delivered order-lərdən hesablanır.
-  const shopRevenue = num(pick(d, ['totalRevenue', 'TotalRevenue', 'revenue', 'totalSales'], 0));
-
+  /* Yalnız tamamlanan randevuların cəmi */
   const vetRevenue = useMemo(() => {
     return appointments
       .filter(isCompletedAppointment)
-      .reduce((sum, a) => sum + appointmentAmount(a), 0);
+      .reduce(
+        (sum, appointment) => sum + appointmentAmount(appointment),
+        0
+      );
   }, [appointments]);
 
   const platformRevenue = shopRevenue + vetRevenue;
 
-  const totalPets = pick(d, ['totalPets', 'TotalPets', 'petCount', 'pets']);
-  const availablePets = pick(d, ['availablePets', 'AvailablePets']);
-  const adoptedPetsFromDashboard = pick(d, ['adoptedPets', 'AdoptedPets'], 0);
-  const adoptedPets = Math.max(num(adoptedPetsFromDashboard), adoptedList.length);
-
-  const totalAdoptionRequests = pick(d, [
-    'totalAdoptionRequests',
-    'TotalAdoptionRequests',
-    'adoptionRequests',
-  ]);
-
-  const totalAppointments = Math.max(
-    num(pick(d, ['totalAppointments', 'TotalAppointments'], 0)),
-    appointments.length
+  /*
+    Endpoint işləyirsə adoptionRequests.length real saydır.
+    Endpoint boş/dəstəksizdirsə dashboard stat fallback olur.
+  */
+  const totalAdoptionRequests = Math.max(
+    adoptionRequests.length,
+    num(
+      pick(
+        dashboardStats,
+        [
+          'totalAdoptionRequests',
+          'TotalAdoptionRequests',
+          'adoptionRequests',
+        ],
+        0
+      )
+    )
   );
 
-  const upcomingAppointments = pick(d, [
-    'upcomingAppointments',
-    'UpcomingAppointments',
-  ]);
+  /*
+    adoptedPets endpoint işləyirsə onun sayını göstərir.
+    Əks halda dashboard API-dan adoptedPets götürülür.
+  */
+  const totalAdoptedPets = Math.max(
+    adoptedPets.length,
+    num(
+      pick(
+        dashboardStats,
+        ['adoptedPets', 'AdoptedPets', 'totalAdoptedPets'],
+        0
+      )
+    )
+  );
 
-  const totalArticles = pick(d, [
-    'totalArticles',
-    'TotalArticles',
-    'articleCount',
-    'articles',
-  ]);
-
-  const totalCustomers = pick(d, ['totalCustomers', 'TotalCustomers']);
-  const totalPetShops = pick(d, ['totalPetShops', 'TotalPetShops']);
-  const totalVets = pick(d, ['totalVets', 'TotalVets']);
+  /*
+    adminApi.users() nəticəsi yoxdursa dashboard API fallback olur.
+  */
+  const totalUsers = Math.max(
+    users.length,
+    num(
+      pick(
+        dashboardStats,
+        ['totalUsers', 'TotalUsers', 'userCount', 'users'],
+        0
+      )
+    )
+  );
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-7">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
+          {[...Array(4)].map((_, index) => (
             <div
-              key={i}
+              key={index}
               className="h-24 bg-white rounded-2xl animate-pulse border border-slate-200"
             />
           ))}
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, index) => (
             <div
-              key={i}
-              className="h-24 bg-white rounded-2xl animate-pulse border border-slate-200"
-            />
-          ))}
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
+              key={index}
               className="h-24 bg-white rounded-2xl animate-pulse border border-slate-200"
             />
           ))}
@@ -166,8 +238,12 @@ const Dashboard = () => {
 
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle="Platformanın ümumi vəziyyəti" />
+      <PageHeader
+        title="Dashboard"
+        subtitle="Platformanın ümumi vəziyyəti"
+      />
 
+      {/* TƏSDİQ GÖZLƏYƏNLƏR */}
       <h2 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3">
         Təsdiq gözləyən
       </h2>
@@ -177,184 +253,71 @@ const Dashboard = () => {
           icon={LuStore}
           label="Mağaza ərizəsi"
           value={pending.shops}
-          tone={pending.shops ? 'amber' : 'emerald'}
-          onClick={() => nav('/admin/shops')}
+          tone={pending.shops > 0 ? 'amber' : 'emerald'}
+          onClick={() => navigate('/admin/shops')}
         />
 
         <StatCard
           icon={LuStethoscope}
           label="Baytar ərizəsi"
           value={pending.vets}
-          tone={pending.vets ? 'amber' : 'emerald'}
-          onClick={() => nav('/admin/vets')}
+          tone={pending.vets > 0 ? 'amber' : 'emerald'}
+          onClick={() => navigate('/admin/vets')}
         />
 
         <StatCard
           icon={LuPawPrint}
           label="Heyvan elanı"
           value={pending.pets}
-          tone={pending.pets ? 'amber' : 'emerald'}
-          onClick={() => nav('/admin/pets')}
+          tone={pending.pets > 0 ? 'amber' : 'emerald'}
+          onClick={() => navigate('/admin/pets')}
         />
 
         <StatCard
           icon={LuMessageSquare}
           label="Rəy"
           value={pending.testimonials}
-          tone={pending.testimonials ? 'amber' : 'emerald'}
-          onClick={() => nav('/admin/testimonials')}
+          tone={pending.testimonials > 0 ? 'amber' : 'emerald'}
+          onClick={() => navigate('/admin/testimonials')}
         />
       </div>
 
+      {/* PLATFORM STATİSTİKASI */}
       <h2 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3">
-        Ticarət və gəlir
+        Platforma statistikası
       </h2>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard
-          icon={LuShoppingCart}
-          label="Sifariş"
-          value={totalOrders}
-          tone="violet"
-          onClick={() => nav('/admin/orders')}
-        />
-
-        <StatCard
-          icon={LuPackage}
-          label="Məhsul"
-          value={totalProducts}
-          tone="slate"
-          onClick={() => nav('/admin/products')}
-        />
-
-        <StatCard
-          icon={LuStore}
-          label="Mağaza satış həcmi"
-          value={formatPrice(shopRevenue)}
-          tone="sky"
-          onClick={() => nav('/admin/revenue')}
-        />
-
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={LuWalletCards}
           label="Ümumi platforma həcmi"
           value={formatPrice(platformRevenue)}
           tone="emerald"
-          onClick={() => nav('/admin/revenue')}
-        />
-      </div>
-
-      <h2 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3">
-        Heyvan və sahiblənmə
-      </h2>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard
-          icon={LuPawPrint}
-          label="Ümumi heyvan"
-          value={totalPets}
-          tone="sky"
-          onClick={() => nav('/admin/all-pets')}
+          onClick={() => navigate('/admin/revenue')}
         />
 
         <StatCard
           icon={LuHeart}
           label="Sahiblənilən"
-          value={adoptedPets}
+          value={totalAdoptedPets}
           tone="emerald"
-          onClick={() => nav('/admin/adopted-pets')}
+          onClick={() => navigate('/admin/all-pets')}
         />
 
         <StatCard
           icon={LuClipboardList}
-          label="Sahiblənmə müraciəti"
+          label="Sahiblənmə müraciətləri"
           value={totalAdoptionRequests}
           tone="violet"
-          onClick={() => nav('/admin/adoption-requests')}
+          onClick={() => navigate('/admin/adoption-requests')}
         />
 
-        <StatCard
-          icon={LuPawPrint}
-          label="Mövcud heyvan"
-          value={availablePets}
-          tone="amber"
-          onClick={() => nav('/admin/all-pets')}
-        />
-      </div>
-
-      <h2 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3">
-        Baytar və məzmun
-      </h2>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard
-          icon={LuCalendarCheck}
-          label="Randevu"
-          value={totalAppointments}
-          tone="sky"
-          onClick={() => nav('/admin/appointments')}
-        />
-
-        <StatCard
-          icon={LuCalendarCheck}
-          label="Yaxınlaşan randevu"
-          value={upcomingAppointments}
-          tone="amber"
-          onClick={() => nav('/admin/appointments')}
-        />
-
-        <StatCard
-          icon={LuStethoscope}
-          label="Baytar xidmət həcmi"
-          value={formatPrice(vetRevenue)}
-          tone="violet"
-          onClick={() => nav('/admin/revenue')}
-        />
-
-        <StatCard
-          icon={LuNewspaper}
-          label="Məqalə"
-          value={totalArticles}
-          tone="slate"
-          onClick={() => nav('/admin/articles')}
-        />
-      </div>
-
-      <h2 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3">
-        İstifadəçilər
-      </h2>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={LuUsers}
-          label="Ümumi istifadəçi"
+          label="Ümumi istifadəçilər"
           value={totalUsers}
           tone="sky"
-          onClick={() => nav('/admin/users')}
-        />
-
-        <StatCard
-          icon={LuUsers}
-          label="Customer"
-          value={totalCustomers}
-          tone="slate"
-          onClick={() => nav('/admin/users')}
-        />
-
-        <StatCard
-          icon={LuStore}
-          label="PetShop"
-          value={totalPetShops}
-          tone="slate"
-          onClick={() => nav('/admin/users')}
-        />
-
-        <StatCard
-          icon={LuStethoscope}
-          label="Vet"
-          value={totalVets}
-          tone="slate"
-          onClick={() => nav('/admin/users')}
+          onClick={() => navigate('/admin/users')}
         />
       </div>
     </div>

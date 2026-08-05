@@ -5,7 +5,7 @@ public enum Gender { Male = 1, Female = 2 }
 
 public enum PetSize { Small = 1, Medium = 2, Large = 3 }
 
-/// <summary>Heyvanı kim yerləşdirib</summary>
+//Heyvanı kim yerləşdirib
 public enum PetOwnerType { PetShop = 1, User = 2 }
 
 public enum AdoptionStatus { Available = 1, Pending = 2, Adopted = 3, Inactive = 4 }
@@ -16,10 +16,10 @@ public enum AppointmentStatus { Pending = 1, Confirmed = 2, Completed = 3, Cance
 
 public enum OrderStatus { Pending = 1, Confirmed = 2, Preparing = 3, Shipped = 4, Delivered = 5, Cancelled = 6 }
 
-/// <summary>PetShop / Baytar hesabının admin təsdiqi</summary>
+//PetShop / Baytar hesabının admin təsdiq
 public enum ApprovalStatus { Pending = 1, Approved = 2, Rejected = 3 }
 
-/// <summary>Bir Category cədvəli — 3 fərqli məqsəd üçün</summary>
+//Bir Category cədvəli — 3 fərqli məqsəd üçün
 public enum CategoryType { Pet = 1, Product = 2, Article = 3 }
 
 public enum NotificationType

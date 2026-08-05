@@ -1,4 +1,4 @@
-﻿// DTOs/Vet/AppointmentGetDto.cs
+﻿
 using ViViPaw.Models.Enums;
 
 namespace ViViPaw.DTOs.Vet;

@@ -1,4 +1,4 @@
-﻿// DTOs/Adoption/AdoptionRequestCreateDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.Adoption;

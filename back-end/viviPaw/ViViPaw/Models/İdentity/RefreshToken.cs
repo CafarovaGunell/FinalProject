@@ -1,4 +1,4 @@
-﻿// Models/Identity/RefreshToken.cs
+﻿
 using ViViPaw.Models.Base;
 
 namespace ViViPaw.Models.Identity;

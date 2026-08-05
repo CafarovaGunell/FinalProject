@@ -1,4 +1,4 @@
-﻿// Models/Vet/VeterinarianProfile.cs
+﻿
 using ViViPaw.Models.Base;
 using ViViPaw.Models.Common;
 using ViViPaw.Models.Enums;

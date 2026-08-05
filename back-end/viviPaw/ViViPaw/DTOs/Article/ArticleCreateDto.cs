@@ -1,4 +1,4 @@
-﻿// DTOs/Article/ArticleCreateDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.Article;

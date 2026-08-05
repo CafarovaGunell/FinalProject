@@ -1,4 +1,4 @@
-﻿// Models/Shop/ProductReview.cs
+﻿
 using ViViPaw.Models.Base;
 using ViViPaw.Models.Identity;
 
@@ -12,7 +12,7 @@ public class ProductReview : BaseEntity
     public int AppUserId { get; set; }
     public AppUser AppUser { get; set; } = null!;
 
-    public int Rating { get; set; }          // 1..5
+    public int Rating { get; set; }          // 1-5
     public string Comment { get; set; } = string.Empty;
     public bool IsApproved { get; set; } = true;
 }

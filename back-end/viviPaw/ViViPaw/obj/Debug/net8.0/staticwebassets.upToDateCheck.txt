@@ -5,3 +5,12 @@ wwwroot\uploads\pets\1aaa4bdf23d54c45aac054f678af2521.png
 wwwroot\uploads\testimonials\abe92af06c2d4b8f9aaa1734e103529e.png
 wwwroot\uploads\pets\e519a47eb13443d69c610888bef08712.png
 wwwroot\uploads\pets\411681009cb2454abda04252de3058c1.png
+wwwroot\uploads\chat\1c05abaf1bc3403f9c373c4f644e4a81.png
+wwwroot\uploads\pets\66ca94a641064297b70d1990b9e65458.png
+wwwroot\uploads\chat\65b9df12584042c0a8a1952b3c1aa9c2.png
+wwwroot\uploads\pets\8f76c69cd920464bb079cc08a6ba210c.png
+wwwroot\uploads\pets\669c636530564a7a9d3c92b92708a6d4.png
+wwwroot\uploads\products\620eb76a3eb3464481bbbd14387054e5.png
+wwwroot\uploads\pets\8dc0cb255f6e4a1e9d2a581c8fadbdff.png
+wwwroot\uploads\shops\0c2bc175c3a44e84bcf181fcc905fb2d.png
+wwwroot\uploads\shops\b8a4b7e5695e488fb7d214714ba6fc0e.png

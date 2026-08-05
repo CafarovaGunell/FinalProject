@@ -58,6 +58,38 @@
   },
   {
     "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "Pets",
+    "RelativePath": "api/Admin/pets",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "DeleteRejectedPet",
+    "RelativePath": "api/Admin/pets/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
     "Method": "ApprovePet",
     "RelativePath": "api/Admin/pets/{id}/approve",
     "HttpMethod": "PUT",
@@ -131,6 +163,22 @@
   },
   {
     "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "DeleteRejectedShop",
+    "RelativePath": "api/Admin/shops/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
     "Method": "ApproveShop",
     "RelativePath": "api/Admin/shops/{id}/approval",
     "HttpMethod": "PUT",
@@ -145,6 +193,38 @@
       {
         "Name": "dto",
         "Type": "ViViPaw.DTOs.Admin.ApprovalDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "Testimonials",
+    "RelativePath": "api/Admin/testimonials",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "DeleteRejectedTestimonial",
+    "RelativePath": "api/Admin/testimonials/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
         "IsRequired": true
       }
     ],
@@ -272,6 +352,22 @@
         "Name": "status",
         "Type": "System.String",
         "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "DeleteRejectedVet",
+    "RelativePath": "api/Admin/vets/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -897,6 +993,143 @@
       {
         "Name": "id",
         "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.ChatController",
+    "Method": "Conversations",
+    "RelativePath": "api/chat/conversations",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.ChatController",
+    "Method": "DeleteConversation",
+    "RelativePath": "api/chat/conversations/{conversationId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "conversationId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.ChatController",
+    "Method": "Messages",
+    "RelativePath": "api/chat/conversations/{conversationId}/messages",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "conversationId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "pageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.ChatController",
+    "Method": "Send",
+    "RelativePath": "api/chat/conversations/{conversationId}/messages",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "conversationId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "dto",
+        "Type": "ViViPaw.DTOs.Chat.SendMessageDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.ChatController",
+    "Method": "Read",
+    "RelativePath": "api/chat/conversations/{conversationId}/read",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "conversationId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.ChatController",
+    "Method": "DeleteMessageForEveryone",
+    "RelativePath": "api/chat/messages/{messageId}/everyone",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "messageId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.ChatController",
+    "Method": "DeleteMessageForMe",
+    "RelativePath": "api/chat/messages/{messageId}/me",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "messageId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.ChatController",
+    "Method": "Start",
+    "RelativePath": "api/chat/start",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "ViViPaw.DTOs.Chat.StartChatDto",
         "IsRequired": true
       }
     ],

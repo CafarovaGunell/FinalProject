@@ -99,7 +99,7 @@ public class UserProfileService : IUserProfileService
 
         var users = await q.OrderBy(u => u.Id).ToListAsync();
 
-        // 3) Rolları ayrıca doldur (mapping-də Ignore olunduğu üçün)
+        // 3) Rolları ayrıca doldur 
         var userIds = users.Select(u => u.Id).ToList();
 
         var roleMap = await (

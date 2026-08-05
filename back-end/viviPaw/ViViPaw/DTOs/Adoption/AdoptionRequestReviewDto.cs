@@ -1,4 +1,4 @@
-﻿// DTOs/Adoption/AdoptionRequestReviewDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 using ViViPaw.Models.Enums;
 

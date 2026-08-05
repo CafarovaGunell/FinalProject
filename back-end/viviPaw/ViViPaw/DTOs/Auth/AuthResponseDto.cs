@@ -1,4 +1,4 @@
-﻿// DTOs/Auth/AuthResponseDto.cs
+﻿
 namespace ViViPaw.DTOs.Auth;
 
 public class AuthResponseDto
@@ -12,7 +12,7 @@ public class AuthResponseDto
     public string RefreshToken { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }
 
-    // Frontend yönləndirmə üçün (varsa)
+    // Frontend yönləndirmə üçün 
     public int? PetShopId { get; set; }
     public int? VeterinarianProfileId { get; set; }
     public string? ApprovalStatus { get; set; } // Pending/Approved/Rejected

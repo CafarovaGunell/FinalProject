@@ -1,4 +1,4 @@
-﻿// Models/Common/Category.cs
+﻿
 using ViViPaw.Models.Base;
 using ViViPaw.Models.Enums;
 

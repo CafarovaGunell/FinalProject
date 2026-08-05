@@ -1,4 +1,4 @@
-﻿// Services/Interfaces/IProductService.cs
+﻿
 using ViViPaw.DTOs.Common;
 using ViViPaw.DTOs.Product;
 
@@ -12,4 +12,5 @@ public interface IProductService
     Task<ApiResponse<ProductDetailDto>> CreateAsync(int userId, ProductCreateDto dto);
     Task<ApiResponse<ProductDetailDto>> UpdateAsync(int userId, bool isAdmin, int id, ProductUpdateDto dto);
     Task<ApiResponse<string>> DeleteAsync(int userId, bool isAdmin, int id);
+  
 }

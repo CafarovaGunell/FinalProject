@@ -1,4 +1,4 @@
-﻿// Helpers/JwtSettings.cs
+﻿
 namespace ViViPaw.Helpers;
 
 public class JwtSettings

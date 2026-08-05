@@ -1,12 +1,14 @@
-﻿// Services/PetShopService.cs
+﻿
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ViViPaw.Data;
 using ViViPaw.DTOs.Admin;
 using ViViPaw.DTOs.Common;
 using ViViPaw.DTOs.PetShop;
 using ViViPaw.Models.Enums;
+using ViViPaw.Models.Identity;
 using ViViPaw.Models.Shop;
 using ViViPaw.Services.Interfaces;
 
@@ -17,12 +19,14 @@ public class PetShopService : IPetShopService
     private readonly AppDbContext _db;
     private readonly IMapper _mapper;
     private readonly INotificationService _notify;
+    private readonly UserManager<AppUser> _userManager;
 
-    public PetShopService(AppDbContext db, IMapper mapper, INotificationService notify)
+    public PetShopService(AppDbContext db, IMapper mapper, INotificationService notify, UserManager<AppUser> userManager)
     {
         _db = db;
         _mapper = mapper;
         _notify = notify;
+        _userManager=userManager;
     }
 
     public async Task<ApiResponse<PetShopDetailDto>> CreateAsync(int userId, PetShopCreateDto dto)
@@ -40,7 +44,7 @@ public class PetShopService : IPetShopService
         _db.PetShops.Add(shop);
         await _db.SaveChangesAsync();
 
-        // Adminlərə bildiriş
+ 
         var adminIds = await _db.UserRoles
             .Where(ur => _db.Roles.Any(r => r.Id == ur.RoleId &&
                         (r.Name == Models.Identity.Roles.Admin || r.Name == Models.Identity.Roles.SuperAdmin)))
@@ -112,13 +116,17 @@ public class PetShopService : IPetShopService
         if (dto.Status == ApprovalStatus.Rejected && string.IsNullOrWhiteSpace(dto.RejectReason))
             return ApiResponse<string>.Fail("Rədd səbəbi qeyd olunmalıdır.");
 
-        shop.ApprovalStatus = dto.Status;
-        shop.RejectReason = dto.Status == ApprovalStatus.Rejected ? dto.RejectReason : null;
-        shop.ApprovedAt = dto.Status == ApprovalStatus.Approved ? DateTime.UtcNow : null;
-        shop.ApprovedByUserId = adminId;
+            shop.ApprovalStatus = dto.Status;
+            shop.RejectReason = dto.Status == ApprovalStatus.Rejected ? dto.RejectReason : null;
+            shop.ApprovedAt = dto.Status == ApprovalStatus.Approved ? DateTime.UtcNow : null;
+             shop.ApprovedByUserId = adminId;
 
+        
+        
         await _db.SaveChangesAsync();
 
+        
+        
         var msg = dto.Status == ApprovalStatus.Approved
             ? "Mağaza hesabınız təsdiqləndi. Artıq məhsul və heyvan əlavə edə bilərsiniz."
             : $"Mağaza müraciətiniz rədd edildi. Səbəb: {dto.RejectReason}";
@@ -127,5 +135,73 @@ public class PetShopService : IPetShopService
             NotificationType.AccountApproved, "/shop/profile");
 
         return ApiResponse<string>.Ok("ok", "Status yeniləndi.");
+    }
+
+
+    public async Task<ApiResponse<string>> DeleteRejectedShopAsync(int shopId)
+    {
+        var shop = await _db.PetShops
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == shopId);
+
+        if (shop is null)
+        {
+            return ApiResponse<string>.Fail("Mağaza profili tapılmadı.");
+        }
+
+        if (shop.ApprovalStatus != ApprovalStatus.Rejected)
+        {
+            return ApiResponse<string>.Fail(
+                "Yalnız rədd edilmiş mağaza silinə bilər."
+            );
+        }
+
+        try
+        {
+           
+            shop.IsDeleted = true;
+
+           
+            var user = await _userManager.FindByIdAsync(
+                shop.AppUserId.ToString()
+            );
+
+            if (user is not null)
+            {
+                user.IsActive = false;
+
+                var updateResult = await _userManager.UpdateAsync(user);
+
+                if (!updateResult.Succeeded)
+                {
+                    return ApiResponse<string>.Fail(
+                        "Mağaza gizlədildi, amma user hesabı deaktiv edilə bilmədi."
+                    );
+                }
+
+               
+                var activeTokens = await _db.RefreshTokens
+                    .Where(x => x.AppUserId == user.Id && !x.IsRevoked)
+                    .ToListAsync();
+
+                foreach (var token in activeTokens)
+                {
+                    token.IsRevoked = true;
+                }
+            }
+
+            await _db.SaveChangesAsync();
+
+            return ApiResponse<string>.Ok(
+                "ok",
+                "Rədd edilmiş mağaza silindi və hesab deaktiv edildi."
+            );
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<string>.Fail(
+                $"Mağaza silinə bilmədi: {ex.InnerException?.Message ?? ex.Message}"
+            );
+        }
     }
 }

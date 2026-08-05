@@ -1,4 +1,4 @@
-﻿// DTOs/Pet/PetDetailDto.cs
+﻿
 using ViViPaw.Models.Enums;
 
 namespace ViViPaw.DTOs.Pet;

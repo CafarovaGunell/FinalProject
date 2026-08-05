@@ -13,9 +13,9 @@ namespace ViViPaw.Services;
 public class NotificationService : INotificationService
 {
     private readonly AppDbContext _db;
-    private readonly IMapper _mapper;          // ★ əlavə
+    private readonly IMapper _mapper;        
 
-    public NotificationService(AppDbContext db, IMapper mapper)   // ★ əlavə
+    public NotificationService(AppDbContext db, IMapper mapper)   
     {
         _db = db;
         _mapper = mapper;

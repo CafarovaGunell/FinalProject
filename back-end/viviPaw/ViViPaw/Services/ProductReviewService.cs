@@ -41,7 +41,7 @@ public class ProductReviewService : IProductReviewService
         if (await _db.ProductReviews.AnyAsync(x => x.ProductId == dto.ProductId && x.AppUserId == userId))
             return ApiResponse<ProductReviewGetDto>.Fail("Bu məhsula artıq rəy yazmısınız.");
 
-        // Yalnız satın alanlar rəy yaza bilər
+        // Yalnız alanlar rəy yaza bilər
         var hasBought = await _db.OrderItems
             .AnyAsync(oi => oi.ProductId == dto.ProductId
                          && oi.Order.CustomerUserId == userId

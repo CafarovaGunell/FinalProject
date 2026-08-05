@@ -2,12 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Package, MapPin, Phone, X, AlertCircle, Ban, CheckCircle2, Truck, Clock,
-  Store, ChevronDown, ChevronUp, ShoppingBasket, FileText,
+  Store, ChevronDown, ChevronUp, ShoppingBasket, FileText, Trash2,
 } from 'lucide-react';
 import { orderApi } from '../../services/endpoints';
 import { getError } from '../../services/api';
 import { ORDER_STATUS_TEXT, ORDER_STATUS_COLOR, PLACEHOLDER_PRODUCT } from '../../utils/constants';
 import { formatPrice, formatDateTime } from '../../utils/helpers';
+
+import StartChatButton from '../components/chat/StartChatButton';
+import { CHAT_TYPE } from '../../utils/chat';
 
 const getNumber = (o) => o.orderNumber || `Sifariş #${o.id}`;
 const getItems  = (o) => o.items || o.orderItems || [];
@@ -15,6 +18,9 @@ const iName     = (it) => it.productName || it.name || 'Məhsul';
 const iImg      = (it) => it.productImageUrl || it.imageUrl || PLACEHOLDER_PRODUCT;
 const iPrice    = (it) => it.unitPrice ?? it.price ?? 0;
 const iShop     = (it) => it.shopName || it.petShopName || '';
+
+const getOrderShopUserId = (o) =>
+  o.petShopUserId || o.shopUserId || o.petShopOwnerUserId || o.shopOwnerUserId || o.sellerUserId || o.ownerUserId;
 
 const STEPS = [
   { s: 1, label: 'Gözləmədə',  icon: Clock },
@@ -24,55 +30,41 @@ const STEPS = [
   { s: 5, label: 'Çatdırıldı', icon: CheckCircle2 },
 ];
 
-/* ═══════════ LƏĞV MODALI ═══════════ */
-const CancelModal = ({ order, onClose, onDone }) => {
-  const [reason, setReason] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setLoading(true); setError('');
-    try {
-      const res = await orderApi.cancel(order.id, reason.trim() || undefined);
-      if (res?.success) onDone();
-      else setError(res?.message || 'Ləğv edilmədi.');
-    } catch (err) {
-      setError(getError(err, 'Ləğv edilmədi.'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative space-y-4" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-xl"><X size={18} /></button>
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-rose-50 text-rose-500 rounded-2xl"><Ban size={22} /></div>
-          <div>
-            <h3 className="text-base font-bold text-slate-900">Sifarişi ləğv et</h3>
-            <p className="text-[11px] text-slate-400">{getNumber(order)}</p>
-          </div>
+/* ═══════════ TƏSDİQ MODALI (silmə + ləğv üçün) ═══════════ */
+const ConfirmModal = ({ title, description, confirmText, confirmColor, icon: Icon, onClose, onConfirm, loading, children }) => (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative space-y-4" onClick={(e) => e.stopPropagation()}>
+      <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 p-2 rounded-xl">
+        <X size={18} />
+      </button>
+      <div className="flex items-center gap-3">
+        <div className={`p-3 rounded-2xl ${confirmColor === 'rose' ? 'bg-rose-50 text-rose-500' : 'bg-slate-100 text-slate-500'}`}>
+          <Icon size={22} />
         </div>
-        {error && (
-          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-semibold flex items-start gap-2">
-            <AlertCircle size={15} className="shrink-0 mt-0.5" /> {error}
-          </div>
-        )}
-        <form onSubmit={submit} className="space-y-3">
-          <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3}
-            placeholder="Səbəb (isteğe bağlı)"
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-rose-400 resize-none" />
-          <button type="submit" disabled={loading}
-            className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center gap-2 disabled:opacity-50">
-            {loading ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /> : <><Ban size={16} /> Ləğvi Təsdiqlə</>}
-          </button>
-        </form>
+        <div>
+          <h3 className="text-base font-bold text-slate-900">{title}</h3>
+          <p className="text-[11px] text-slate-400">{description}</p>
+        </div>
+      </div>
+      {children}
+      <div className="flex gap-2">
+        <button onClick={onClose}
+          className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+          Xeyr, geri
+        </button>
+        <button onClick={onConfirm} disabled={loading}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-bold text-white transition flex items-center justify-center gap-1.5 disabled:opacity-50 ${
+            confirmColor === 'rose' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-slate-700 hover:bg-slate-800'
+          }`}>
+          {loading
+            ? <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+            : <Icon size={14} />}
+          {confirmText}
+        </button>
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 /* ═══════════ STATUS TIMELINE ═══════════ */
 const Timeline = ({ status }) => {
@@ -116,6 +108,10 @@ const MyOrders = () => {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [toast, setToast] = useState('');
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
@@ -136,12 +132,82 @@ const MyOrders = () => {
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
+  const handleCancel = async () => {
+    if (!cancelTarget) return;
+    setCancelLoading(true);
+    try {
+      const res = await orderApi.cancel(cancelTarget.id, cancelReason.trim() || undefined);
+      if (res?.success) { showToast('Sifariş ləğv edildi'); fetchList(); }
+      else showToast(res?.message || 'Ləğv edilmədi.');
+    } catch (err) {
+      showToast(getError(err, 'Ləğv edilmədi.'));
+    } finally {
+      setCancelLoading(false);
+      setCancelTarget(null);
+      setCancelReason('');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      if (typeof orderApi.remove === 'function') {
+        const res = await orderApi.remove(deleteTarget.id);
+        if (res?.success) { showToast('🗑️ Sifariş silindi'); fetchList(); setDeleteLoading(false); setDeleteTarget(null); return; }
+      }
+      setOrders((prev) => prev.filter((o) => o.id !== deleteTarget.id));
+      showToast('🗑️ Siyahıdan silindi');
+    } catch (e) {
+      setOrders((prev) => prev.filter((o) => o.id !== deleteTarget.id));
+      showToast('🗑️ Siyahıdan silindi');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  const canCancel = (o) => o.status === 1;
+  const canDelete = (o) => o.status === 5 || o.status === 6;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 antialiased pb-16">
+      {/* LƏĞV MODALI */}
       {cancelTarget && (
-        <CancelModal order={cancelTarget} onClose={() => setCancelTarget(null)}
-          onDone={() => { setCancelTarget(null); showToast('Sifariş ləğv edildi'); fetchList(); }} />
+        <ConfirmModal
+          title="Sifarişi ləğv et"
+          description={getNumber(cancelTarget)}
+          confirmText="Ləğv et"
+          confirmColor="rose"
+          icon={Ban}
+          onClose={() => { setCancelTarget(null); setCancelReason(''); }}
+          onConfirm={handleCancel}
+          loading={cancelLoading}
+        >
+          <textarea
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            rows={3}
+            placeholder="Səbəb (isteğe bağlı)"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-rose-400 resize-none"
+          />
+        </ConfirmModal>
       )}
+
+      {/* SİLMƏ MODALI */}
+      {deleteTarget && (
+        <ConfirmModal
+          title="Sifarişi siyahıdan sil"
+          description={`${getNumber(deleteTarget)} silinəcək. Bu əməliyyat geri qaytarıla bilməz.`}
+          confirmText="Sil"
+          confirmColor="rose"
+          icon={Trash2}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleDelete}
+          loading={deleteLoading}
+        />
+      )}
+
       {toast && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[70] bg-slate-900 text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-2xl">{toast}</div>
       )}
@@ -171,11 +237,21 @@ const MyOrders = () => {
             {orders.map((o) => {
               const items = getItems(o);
               const open = expanded === o.id;
-              const canCancel = o.status === 1 || o.status === 2;
               return (
-                <div key={o.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <div key={o.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm relative">
+                  {/* SİLMƏ X BUTTONU — sağ yuxarı künc */}
+                  {canDelete(o) && (
+                    <button
+                      onClick={() => setDeleteTarget(o)}
+                      className="absolute top-3 right-3 z-10 p-1.5 rounded-lg bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-500 border border-slate-200 hover:border-rose-200 transition"
+                      title="Siyahıdan sil"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+
                   {/* BAŞLIQ */}
-                  <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100">
+                  <div className="p-5 pr-12 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100">
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 bg-slate-50 text-slate-500 rounded-xl"><FileText size={18} /></div>
                       <div>
@@ -241,7 +317,7 @@ const MyOrders = () => {
                           <p className="text-slate-600 font-semibold">{o.shippingFullName}</p>
                           {o.shippingPhone && <p className="text-slate-500 flex items-center gap-1"><Phone size={11} /> {o.shippingPhone}</p>}
                           <p className="text-slate-500">{o.shippingCity}, {o.shippingAddress}</p>
-                          {o.note && <p className="text-slate-400 italic">“{o.note}”</p>}
+                          {o.note && <p className="text-slate-400 italic">"{o.note}"</p>}
                         </div>
                         <div className="bg-slate-50 rounded-xl p-3.5 space-y-1.5 font-semibold text-slate-600">
                           <div className="flex justify-between"><span>Ara cəm</span><span>{formatPrice(o.subTotal)}</span></div>
@@ -254,14 +330,26 @@ const MyOrders = () => {
                   )}
 
                   {/* ƏMƏLİYYAT */}
-                  {canCancel && (
-                    <div className="px-5 pb-4">
-                      <button onClick={() => setCancelTarget(o)}
-                        className="w-full py-2.5 rounded-xl text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition flex items-center justify-center gap-1.5">
-                        <Ban size={13} /> Sifarişi ləğv et
+                  <div className="px-5 pb-4 flex flex-col sm:flex-row gap-2">
+                    <StartChatButton
+                      type={CHAT_TYPE.ORDER}
+                      orderId={o.id}
+                      targetUserId={getOrderShopUserId(o) || undefined}
+                      className="flex-1 py-2.5 rounded-xl"
+                    >
+                      Mağazaya yaz
+                    </StartChatButton>
+
+                    {canCancel(o) && (
+                      <button
+                        onClick={() => setCancelTarget(o)}
+                        className="flex-1 py-2.5 rounded-xl text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition flex items-center justify-center gap-1.5"
+                      >
+                        <Ban size={13} />
+                        Sifarişi ləğv et
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               );
             })}

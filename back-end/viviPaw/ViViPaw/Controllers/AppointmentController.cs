@@ -16,7 +16,7 @@ public class AppointmentController : ControllerBase
     private readonly IAppointmentService _service;
     public AppointmentController(IAppointmentService service) => _service = service;
 
-    /// <summary>Boş slotlar. date: 2026-08-01</summary>
+    //Boş slotlar. date: 2026-08-01
     [HttpGet("slots")]
     [AllowAnonymous]
     public async Task<IActionResult> Slots(
@@ -28,7 +28,7 @@ public class AppointmentController : ControllerBase
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
-    /// <summary>Randevu yaz</summary>
+    //Randevu yaz
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> Create([FromBody] AppointmentCreateDto dto)
@@ -42,7 +42,7 @@ public class AppointmentController : ControllerBase
     public async Task<IActionResult> My([FromQuery] AppointmentStatus? status)
         => Ok(await _service.GetMyAppointmentsAsync(User.GetUserId(), status));
 
-    /// <summary>Baytarın randevuları</summary>
+    //Baytarın randevuları
     [HttpGet("vet-appointments")]
     [Authorize(Roles = Roles.Veterinarian)]
     public async Task<IActionResult> VetList([FromQuery] AppointmentStatus? status, [FromQuery] DateTime? date)
@@ -57,7 +57,7 @@ public class AppointmentController : ControllerBase
         return r.Success ? Ok(r) : NotFound(r);
     }
 
-    /// <summary>Baytar: status dəyiş (2=Confirmed, 3=Completed, 4=Cancelled, 5=NoShow)</summary>
+    //Baytar: status dəyiş 
     [HttpPut("{id:int}/status")]
     [Authorize(Roles = Roles.Veterinarian)]
     public async Task<IActionResult> ChangeStatus(int id,
@@ -67,7 +67,7 @@ public class AppointmentController : ControllerBase
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
-    /// <summary>Müştəri ləğvi (2 saatdan az qalıbsa olmaz)</summary>
+    //Müştəri ləğvi (2 saatdan az qalıbsa olmaz)
     [HttpPut("{id:int}/cancel")]
     [Authorize]
     public async Task<IActionResult> Cancel(int id, [FromQuery] string? reason)

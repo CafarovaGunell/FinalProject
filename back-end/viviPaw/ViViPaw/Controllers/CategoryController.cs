@@ -1,4 +1,4 @@
-﻿// Controllers/CategoryController.cs
+﻿
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ViViPaw.DTOs.Category;
@@ -15,7 +15,7 @@ public class CategoryController : ControllerBase
     private readonly ICategoryService _service;
     public CategoryController(ICategoryService service) => _service = service;
 
-    /// <summary>type: 1=Pet, 2=Product, 3=Article (boş buraxsanız hamısı)</summary>
+    //type: 1=Pet, 2=Product, 3=Article 
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] CategoryType? type)

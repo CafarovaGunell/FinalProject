@@ -1,4 +1,4 @@
-﻿// DTOs/Vet/AvailableSlotDto.cs
+﻿
 namespace ViViPaw.DTOs.Vet;
 
 public class AvailableSlotDto

@@ -1,4 +1,4 @@
-﻿// DTOs/Product/ProductDetailDto.cs
+﻿
 namespace ViViPaw.DTOs.Product;
 
 public class ProductDetailDto

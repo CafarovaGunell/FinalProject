@@ -1,6 +1,7 @@
-﻿// Services/Interfaces/IPetService.cs
+﻿
 using ViViPaw.DTOs.Common;
 using ViViPaw.DTOs.Pet;
+using ViViPaw.Models.Enums;
 
 namespace ViViPaw.Services.Interfaces;
 
@@ -16,4 +17,12 @@ public interface IPetService
     // Admin
     Task<ApiResponse<PagedResult<PetGetDto>>> GetPendingAsync(int page, int pageSize);
     Task<ApiResponse<string>> ApproveAsync(int petId, bool approve, string? reason);
+
+    Task<ApiResponse<List<PetGetDto>>> GetAdminByStatusAsync(
+    ApprovalStatus status
+);
+
+    Task<ApiResponse<string>> AdminDeleteRejectedAsync(int petId);
 }
+
+

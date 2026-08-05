@@ -1,4 +1,4 @@
-﻿// Models/Shop/PetShop.cs
+﻿
 using ViViPaw.Models.Adoption;
 using ViViPaw.Models.Base;
 using ViViPaw.Models.Enums;
@@ -27,7 +27,7 @@ public class PetShop : BaseEntity
     public string TaxNumber { get; set; } = string.Empty;          // VÖEN
     public string? BusinessLicenseUrl { get; set; }
 
-    // --- Admin təsdiqi ---
+    // Admin təsdiqi
     public ApprovalStatus ApprovalStatus { get; set; } = ApprovalStatus.Pending;
     public string? RejectReason { get; set; }
     public DateTime? ApprovedAt { get; set; }

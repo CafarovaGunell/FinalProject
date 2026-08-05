@@ -1,4 +1,4 @@
-﻿// Models/Vet/VetAppointment.cs
+﻿
 using ViViPaw.Models.Adoption;
 using ViViPaw.Models.Base;
 using ViViPaw.Models.Enums;
@@ -17,11 +17,11 @@ public class VetAppointment : BaseEntity
     public int VetServiceId { get; set; }
     public VetService VetService { get; set; } = null!;
 
-    /// <summary>Platformadakı heyvan (varsa)</summary>
+    //Platformadakı heyvan (varsa)
     public int? PetId { get; set; }
     public Pet? Pet { get; set; }
 
-    /// <summary>Heyvan platformada yoxdursa: "Pişik, Mələk, 2 yaş"</summary>
+    //Heyvan platformada yoxdursa: "Pişik, Mələk, 2 yaş"
     public string? PetInfo { get; set; }
 
     public string ClientPhone { get; set; } = string.Empty;

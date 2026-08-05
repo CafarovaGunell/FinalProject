@@ -16,7 +16,7 @@ public class AdoptionRequestController : ControllerBase
     private readonly IAdoptionRequestService _service;
     public AdoptionRequestController(IAdoptionRequestService service) => _service = service;
 
-    /// <summary>Sahiblənmə müraciəti göndər</summary>
+    //Sahiblənmə müraciəti göndər
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] AdoptionRequestCreateDto dto)
     {
@@ -24,12 +24,12 @@ public class AdoptionRequestController : ControllerBase
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
-    /// <summary>Mənim göndərdiyim müraciətlər</summary>
+    //Mənim göndərdiyim müraciətlər
     [HttpGet("my-requests")]
     public async Task<IActionResult> MyRequests()
         => Ok(await _service.GetMyRequestsAsync(User.GetUserId()));
 
-    /// <summary>Mənim elanlarıma gələn müraciətlər</summary>
+    //Mənim elanlarıma gələn müraciətlər
     [HttpGet("received")]
     public async Task<IActionResult> Received()
         => Ok(await _service.GetReceivedAsync(User.GetUserId()));
@@ -41,7 +41,7 @@ public class AdoptionRequestController : ControllerBase
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
-    /// <summary>Təsdiq / rədd (status: 2=Approved, 3=Rejected)</summary>
+    //Təsdiq / rədd (status: 2=Approved, 3=Rejected)
     [HttpPut("{id:int}/review")]
     public async Task<IActionResult> Review(int id, [FromBody] AdoptionRequestReviewDto dto)
     {

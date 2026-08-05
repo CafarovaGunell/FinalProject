@@ -1,9 +1,9 @@
-﻿// DTOs/Pet/PetGetDto.cs
+﻿
 using ViViPaw.Models.Enums;
 
 namespace ViViPaw.DTOs.Pet;
 
-/// <summary>Kart / siyahı üçün yüngül DTO</summary>
+
 public class PetGetDto
 {
     public int Id { get; set; }

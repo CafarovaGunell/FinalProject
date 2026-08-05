@@ -1,4 +1,4 @@
-﻿// DTOs/Vet/VetScheduleDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.Vet;

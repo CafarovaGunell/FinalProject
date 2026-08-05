@@ -1,9 +1,9 @@
-﻿// Models/Vet/VetTimeOff.cs
+﻿
 using ViViPaw.Models.Base;
 
 namespace ViViPaw.Models.Vet;
 
-/// <summary>Məzuniyyət / bağlı günlər</summary>
+//Məzuniyyət / bağlı günlər
 public class VetTimeOff : BaseEntity
 {
     public int VeterinarianProfileId { get; set; }

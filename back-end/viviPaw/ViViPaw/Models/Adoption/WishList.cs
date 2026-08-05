@@ -1,4 +1,4 @@
-﻿// Models/Adoption/WishList.cs
+﻿
 using ViViPaw.Models.Base;
 using ViViPaw.Models.Identity;
 

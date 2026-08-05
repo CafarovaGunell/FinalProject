@@ -1,4 +1,4 @@
-﻿// DTOs/Common/PagedResult.cs
+﻿
 namespace ViViPaw.DTOs.Common;
 
 public class PagedResult<T>

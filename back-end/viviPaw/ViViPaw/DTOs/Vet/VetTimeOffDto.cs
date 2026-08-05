@@ -1,4 +1,4 @@
-﻿// DTOs/Vet/VetTimeOffDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.Vet;

@@ -11,6 +11,8 @@ import { useAuth } from '../context/AuthContext';
 import AuthModal from '../components/AuthModal';
 import { PLACEHOLDER_PRODUCT } from '../../utils/constants';
 import { formatPrice, formatDate, getPetIcon } from '../../utils/helpers';
+import StartChatButton from '../components/chat/StartChatButton';
+import { CHAT_TYPE } from '../../utils/chat';
 
 const getShop   = (p) => p.petShopName || p.shopName || p.petShop?.name || '';
 const getCity   = (p) => p.city || p.shopCity || p.petShop?.city || '';
@@ -26,7 +28,7 @@ const ProductDetail = () => {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [debug, setDebug] = useState('');          // 🔍 real xəta səbəbi
+  const [debug, setDebug] = useState('');
   const [activeImg, setActiveImg] = useState(0);
   const [qty, setQty] = useState(1);
   const [authModal, setAuthModal] = useState(false);
@@ -45,7 +47,6 @@ const ProductDetail = () => {
     setLoading(true);
     setDebug('');
     try {
-      /* 🔍 Məhsul sorğusu — xətanı udmuruq, qeydə alırıq */
       let pRes = null;
       try {
         pRes = await productApi.byId(id);
@@ -53,7 +54,6 @@ const ProductDetail = () => {
         const status = e?.response?.status || 'network';
         const msg = e?.response?.data?.message || e?.response?.data?.title || e?.message || '';
         setDebug(`HTTP ${status} — ${msg}`);
-        console.error('🔴 Product byId xətası:', status, e?.response?.data || e?.message);
         pRes = null;
       }
 
@@ -64,7 +64,6 @@ const ProductDetail = () => {
         setNotFound(true);
       }
 
-      /* Rəylər (problem deyil, sadəcə yüklə) */
       const rRes = await productApi.reviews(id).catch(() => null);
       if (rRes?.success) {
         const list = Array.isArray(rRes.data) ? rRes.data : (rRes.data?.items || []);
@@ -98,7 +97,6 @@ const ProductDetail = () => {
         <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center max-w-md space-y-4">
           <div className="w-16 h-16 bg-slate-100 rounded-full grid place-items-center mx-auto text-slate-400"><Package size={30} /></div>
           <h2 className="text-xl font-bold text-slate-900">Məhsul tapılmadı</h2>
-          {/* 🔍 Debug məlumatı — səbəbi buradan görəcəyik */}
           <div className="text-left bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1">
             <p className="text-[11px] text-slate-500 font-mono">ID: {id}</p>
             <p className="text-[11px] text-rose-600 font-mono break-all">{debug || 'Naməlum səbəb'}</p>
@@ -238,8 +236,9 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex items-center bg-white border border-slate-200 rounded-2xl overflow-hidden">
+            {/* SƏBƏT + SAY — bir sətirdə */}
+            <div className="flex gap-3">
+              <div className="flex items-center bg-white border border-slate-200 rounded-2xl overflow-hidden shrink-0">
                 <button onClick={() => setQty((q) => Math.max(1, q - 1))} disabled={qty <= 1}
                   className="px-4 py-3.5 text-slate-500 hover:bg-slate-50 disabled:opacity-30 transition"><Minus size={16} /></button>
                 <span className="w-12 text-center text-sm font-black text-slate-900">{qty}</span>
@@ -255,6 +254,24 @@ const ProductDetail = () => {
                 Səbətə əlavə et {finalPrice ? `• ${formatPrice(finalPrice * qty)}` : ''}
               </button>
             </div>
+
+            {/* MAĞAZAYA YAZ — tam enli, ayrı sətir */}
+            <StartChatButton
+              type={CHAT_TYPE.PRODUCT}
+              productId={product.id}
+              petShopId={product.petShopId || undefined}
+              targetUserId={
+                product.petShopUserId ||
+                product.shopUserId ||
+                product.petShopOwnerUserId ||
+                product.shopOwnerUserId ||
+                product.sellerUserId ||
+                undefined
+              }
+              className="w-full py-4 rounded-2xl"
+            >
+              Mağazaya yaz
+            </StartChatButton>
 
             <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-2">
               <h3 className="text-sm font-bold text-slate-900">Məhsul haqqında</h3>

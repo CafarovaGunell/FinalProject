@@ -1,4 +1,4 @@
-﻿// Controllers/UploadController.cs
+﻿
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ViViPaw.DTOs.Common;
@@ -15,7 +15,7 @@ public class UploadController : ControllerBase
 
     public UploadController(IFileService file) => _file = file;
 
-    /// <summary>Tək şəkil yüklə. folder: pets | products | users | shops | vets | articles</summary>
+    //Tək şəkil yüklə
     [HttpPost("single")]
     public async Task<IActionResult> Single(IFormFile file, [FromQuery] string folder = "misc")
     {
@@ -23,7 +23,7 @@ public class UploadController : ControllerBase
         return Ok(ApiResponse<string>.Ok(url, "Şəkil yükləndi."));
     }
 
-    /// <summary>Çoxlu şəkil yüklə</summary>
+    //Çoxlu şəkil yüklə
     [HttpPost("multiple")]
     public async Task<IActionResult> Multiple(List<IFormFile> files, [FromQuery] string folder = "misc")
     {

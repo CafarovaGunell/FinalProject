@@ -1,4 +1,4 @@
-﻿// DTOs/Common/ApiResponse.cs
+﻿
 namespace ViViPaw.DTOs.Common;
 
 public class ApiResponse<T>

@@ -1,4 +1,4 @@
-﻿// Controllers/VetProfileController.cs
+﻿
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ViViPaw.DTOs.Vet;
@@ -40,7 +40,7 @@ public class VetProfileController : ControllerBase
         return r.Success ? Ok(r) : NotFound(r);
     }
 
-    /// <summary>Təsdiqlənmiş baytarlar (public)</summary>
+    //Təsdiqlənmiş baytarlar (public
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] string? city, [FromQuery] string? specialty)

@@ -300,16 +300,26 @@ const Auth = () => {
             {/* Telefon + Şəhər */}
             {!isLogin && (
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Telefon</label>
-                  <input
-                    name="phoneNumber"
-                    value={form.phoneNumber}
-                    onChange={handleChange}
-                    placeholder="0501234567"
-                    className={inputCls()}
-                  />
-                </div>
+               <div className="space-y-1">
+  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Telefon</label>
+  <input
+    name="phoneNumber"
+    value={form.phoneNumber}
+    onChange={(e) => {
+      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+      setForm({ ...form, phoneNumber: val });
+      setFieldErrors((p) => ({ ...p, phoneNumber: '' }));
+      setGeneralError('');
+    }}
+    inputMode="numeric"
+    maxLength={10}
+    placeholder="0501234567"
+    className={inputCls()}
+  />
+  <p className={`text-[10px] font-semibold ${form.phoneNumber.length === 10 ? 'text-emerald-400' : 'text-slate-500'}`}>
+    {form.phoneNumber.length}/10 rəqəm
+  </p>
+</div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Şəhər</label>
                   <select
@@ -358,3 +368,5 @@ const Auth = () => {
 };
 
 export default Auth;
+
+

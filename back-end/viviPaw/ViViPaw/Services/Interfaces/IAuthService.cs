@@ -1,4 +1,4 @@
-﻿// Services/Interfaces/IAuthService.cs
+﻿
 using ViViPaw.DTOs.Auth;
 using ViViPaw.DTOs.Common;
 
@@ -12,3 +12,6 @@ public interface IAuthService
     Task<ApiResponse<string>> LogoutAsync(int userId, string refreshToken);
     Task<ApiResponse<string>> ChangePasswordAsync(int userId, ChangePasswordDto dto);
 }
+
+
+

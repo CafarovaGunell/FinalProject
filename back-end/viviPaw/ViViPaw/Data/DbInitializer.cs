@@ -1,4 +1,4 @@
-﻿// Data/DbInitializer.cs
+﻿
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ViViPaw.Models.Common;
@@ -17,14 +17,14 @@ public static class DbInitializer
 
         await db.Database.MigrateAsync();
 
-        // ---- 1. Rollar ----
+        // Rollar 
         foreach (var role in Roles.All)
         {
             if (!await roleManager.RoleExistsAsync(role))
                 await roleManager.CreateAsync(new AppRole { Name = role, Description = role });
         }
 
-        // ---- 2. SuperAdmin ----
+        //SuperAdmin 
         var email = config["SeedAdmin:Email"]!;
         var password = config["SeedAdmin:Password"]!;
         var fullName = config["SeedAdmin:FullName"]!;
@@ -44,7 +44,7 @@ public static class DbInitializer
                 await userManager.AddToRoleAsync(admin, Roles.SuperAdmin);
         }
 
-        // ---- 3. Kateqoriyalar ----
+        // Kateqoriyalar 
         if (!await db.Categories.AnyAsync())
         {
             var categories = new List<Category>

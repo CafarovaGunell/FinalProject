@@ -1,4 +1,4 @@
-﻿// Controllers/AuthController.cs
+﻿
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ViViPaw.DTOs.Auth;
@@ -16,7 +16,7 @@ public class AuthController : ControllerBase
 
     public AuthController(IAuthService auth) => _auth = auth;
 
-    /// <summary>Qeydiyyat (Customer / PetShop / Veterinarian)</summary>
+  
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterDto dto)
@@ -25,7 +25,10 @@ public class AuthController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
-    /// <summary>Giriş</summary>
+
+
+
+
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
@@ -34,7 +37,9 @@ public class AuthController : ControllerBase
         return result.Success ? Ok(result) : Unauthorized(result);
     }
 
-    /// <summary>Access token-i yenilə</summary>
+
+
+    //Access token-i yenilə
     [HttpPost("refresh-token")]
     [AllowAnonymous]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenDto dto)
@@ -43,7 +48,10 @@ public class AuthController : ControllerBase
         return result.Success ? Ok(result) : Unauthorized(result);
     }
 
-    /// <summary>Çıxış</summary>
+
+
+
+
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout([FromBody] RefreshTokenDto dto)
@@ -52,7 +60,8 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>Parol dəyişmə</summary>
+
+
     [HttpPost("change-password")]
     [Authorize]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
@@ -61,7 +70,12 @@ public class AuthController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
-    /// <summary>Cari istifadəçi (token yoxlaması üçün)</summary>
+
+
+
+
+
+    //Cari istifadəçi (token yoxlaması üçün)
     [HttpGet("me")]
     [Authorize]
     public IActionResult Me()
@@ -76,3 +90,5 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<object>.Ok(data));
     }
 }
+
+

@@ -1,4 +1,4 @@
-﻿// DTOs/WishList/WishListPetDto.cs
+﻿
 using ViViPaw.Models.Enums;
 
 namespace ViViPaw.DTOs.WishList;

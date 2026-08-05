@@ -1,4 +1,4 @@
-﻿// DTOs/Vet/VetProfileCreateDto.cs
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace ViViPaw.DTOs.Vet;
@@ -32,4 +32,4 @@ public class VetProfileCreateDto
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
 }
-// UserId YOXDUR → JWT-dən
+// UserId YOXDUR - JWT-dən

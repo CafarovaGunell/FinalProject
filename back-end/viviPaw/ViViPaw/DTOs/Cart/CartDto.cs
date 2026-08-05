@@ -1,4 +1,4 @@
-﻿// DTOs/Cart/CartDto.cs
+﻿
 namespace ViViPaw.DTOs.Cart;
 
 public class CartDto

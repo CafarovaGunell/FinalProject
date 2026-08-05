@@ -1,4 +1,4 @@
-﻿// DTOs/Testimonial/TestimonialGetDto.cs
+﻿
 namespace ViViPaw.DTOs.Testimonial;
 
 public class TestimonialGetDto
