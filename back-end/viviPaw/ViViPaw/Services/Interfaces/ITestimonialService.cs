@@ -21,6 +21,8 @@ public interface ITestimonialService
 );
 
     Task<ApiResponse<string>> AdminDeleteRejectedAsync(int id);
+
+    Task<ApiResponse<TestimonialGetDto>> UpdateAsync(int userId,int id,TestimonialCreateDto dto);
 }
 
 

@@ -1,5 +1,6 @@
 ﻿
 using ViViPaw.Models.Base;
+using ViViPaw.Models.Enums;
 using ViViPaw.Models.Identity;
 
 namespace ViViPaw.Models.Shop;
@@ -15,4 +16,7 @@ public class ProductReview : BaseEntity
     public int Rating { get; set; }          // 1-5
     public string Comment { get; set; } = string.Empty;
     public bool IsApproved { get; set; } = true;
+
+
+    public ApprovalStatus ApprovalStatus { get; set; } = ApprovalStatus.Pending;
 }

@@ -66,27 +66,57 @@ public class TestimonialService : ITestimonialService
         return ApiResponse<List<TestimonialGetDto>>.Ok(list);
     }
 
-    public async Task<ApiResponse<TestimonialGetDto>> CreateAsync(int userId, TestimonialCreateDto dto)
-    {
-        var recent = await _db.Testimonials
-            .AnyAsync(x => x.AppUserId == userId && x.CreatedAt > DateTime.UtcNow.AddDays(-1));
-        if (recent)
-            return ApiResponse<TestimonialGetDto>.Fail("Gündə yalnız bir rəy yaza bilərsiniz.");
+    //public async Task<ApiResponse<TestimonialGetDto>> CreateAsync(int userId, TestimonialCreateDto dto)
+    //{
+    //    var recent = await _db.Testimonials
+    //        .AnyAsync(x => x.AppUserId == userId && x.CreatedAt > DateTime.UtcNow.AddDays(-1));
+    //    if (recent)
+    //        return ApiResponse<TestimonialGetDto>.Fail("Gündə yalnız bir rəy yaza bilərsiniz.");
 
+
+
+
+    //    var entity = _mapper.Map<Testimonial>(dto);
+    //    entity.AppUserId = userId;
+    //    entity.IsApproved = false;
+
+    //    entity.ApprovalStatus = ApprovalStatus.Pending;
+    //    entity.RejectReason = null;
+
+    //    _db.Testimonials.Add(entity);
+    //    await _db.SaveChangesAsync();
+
+    //    var result = await _db.Testimonials.Where(x => x.Id == entity.Id)
+    //        .ProjectTo<TestimonialGetDto>(_mapper.ConfigurationProvider).FirstAsync();
+
+    //    return ApiResponse<TestimonialGetDto>.Ok(result, "Rəyiniz göndərildi. Admin təsdiqindən sonra dərc olunacaq.");
+    //}
+
+
+    public async Task<ApiResponse<TestimonialGetDto>> CreateAsync(
+    int userId,
+    TestimonialCreateDto dto)
+    {
         var entity = _mapper.Map<Testimonial>(dto);
+
         entity.AppUserId = userId;
         entity.IsApproved = false;
-
         entity.ApprovalStatus = ApprovalStatus.Pending;
         entity.RejectReason = null;
 
         _db.Testimonials.Add(entity);
         await _db.SaveChangesAsync();
 
-        var result = await _db.Testimonials.Where(x => x.Id == entity.Id)
-            .ProjectTo<TestimonialGetDto>(_mapper.ConfigurationProvider).FirstAsync();
+        var result = await _db.Testimonials
+            .Where(x => x.Id == entity.Id)
+            .ProjectTo<TestimonialGetDto>(
+                _mapper.ConfigurationProvider)
+            .FirstAsync();
 
-        return ApiResponse<TestimonialGetDto>.Ok(result, "Rəyiniz göndərildi. Admin təsdiqindən sonra dərc olunacaq.");
+        return ApiResponse<TestimonialGetDto>.Ok(
+            result,
+            "Rəyiniz göndərildi. Admin təsdiqindən sonra dərc olunacaq."
+        );
     }
 
     public async Task<ApiResponse<string>> ToggleLikeAsync(int userId, int testimonialId)
@@ -255,5 +285,62 @@ public class TestimonialService : ITestimonialService
         t.IsDeleted = true;
         await _db.SaveChangesAsync();
         return ApiResponse<string>.Ok("ok", "Rəy silindi.");
+    }
+
+
+
+    public async Task<ApiResponse<TestimonialGetDto>> UpdateAsync(
+    int userId,
+    int id,
+    TestimonialCreateDto dto)
+    {
+        if (dto is null)
+            return ApiResponse<TestimonialGetDto>.Fail(
+                "Rəy məlumatları boş ola bilməz."
+            );
+
+        if (dto.Rating < 1 || dto.Rating > 5)
+            return ApiResponse<TestimonialGetDto>.Fail(
+                "Qiymətləndirmə 1 ilə 5 arasında olmalıdır."
+            );
+
+        if (string.IsNullOrWhiteSpace(dto.Comment))
+            return ApiResponse<TestimonialGetDto>.Fail(
+                "Rəy mətni boş ola bilməz."
+            );
+
+        var testimonial = await _db.Testimonials
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
+
+        if (testimonial is null)
+            return ApiResponse<TestimonialGetDto>.Fail("Rəy tapılmadı.");
+
+        if (testimonial.AppUserId != userId)
+            return ApiResponse<TestimonialGetDto>.Fail(
+                "Bu rəyi redaktə etmək icazəniz yoxdur."
+            );
+
+        testimonial.Rating = dto.Rating;
+        testimonial.Comment = dto.Comment.Trim();
+        testimonial.PetImageUrl = dto.PetImageUrl;
+
+        // Redaktə ediləndən sonra yenidən admin təsdiqi lazımdır.
+        testimonial.IsApproved = false;
+        testimonial.ApprovalStatus = ApprovalStatus.Pending;
+        testimonial.RejectReason = null;
+
+        await _db.SaveChangesAsync();
+
+        var result = await _db.Testimonials
+            .IgnoreQueryFilters()
+            .Where(x => x.Id == testimonial.Id)
+            .ProjectTo<TestimonialGetDto>(_mapper.ConfigurationProvider)
+            .FirstAsync();
+
+        return ApiResponse<TestimonialGetDto>.Ok(
+            result,
+            "Rəy yeniləndi və yenidən admin təsdiqinə göndərildi."
+        );
     }
 }

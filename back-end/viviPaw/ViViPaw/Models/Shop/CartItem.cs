@@ -13,3 +13,5 @@ public class CartItem : BaseEntity
 
     public int Quantity { get; set; } = 1;
 }
+
+

@@ -66,6 +66,10 @@ public class CartService : ICartService
             .FirstOrDefaultAsync(i => i.Id == itemId && i.Cart.AppUserId == userId);
 
         if (item is null) return ApiResponse<CartDto>.Fail("Səbət elementi tapılmadı.");
+
+        if (dto.Quantity < 1)
+            return ApiResponse<CartDto>.Fail("Məhsul sayı minimum 1 olmalıdır.");
+
         if (dto.Quantity > item.Product.StockQuantity)
             return ApiResponse<CartDto>.Fail($"Anbarda yalnız {item.Product.StockQuantity} ədəd var.");
 
@@ -99,3 +103,5 @@ public class CartService : ICartService
         return ApiResponse<string>.Ok("ok", "Səbət boşaldıldı.");
     }
 }
+
+

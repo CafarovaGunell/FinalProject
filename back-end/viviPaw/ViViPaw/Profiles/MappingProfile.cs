@@ -247,6 +247,9 @@ public class MappingProfile : Profile
             .ForMember(d => d.UserImageUrl, o => o.MapFrom(s => s.AppUser != null ? s.AppUser.ImageUrl : null))
             .ForMember(d => d.DateText, o => o.MapFrom(s => FormatHelpers.FormatDate(s.CreatedAt)));
 
+
+
+
         // -------- Article update --------
         CreateMap<ArticleUpdateDto, PetCareArticle>()
             .ForMember(d => d.Slug, o => o.Ignore())

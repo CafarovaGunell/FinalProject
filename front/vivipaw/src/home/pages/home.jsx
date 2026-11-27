@@ -163,7 +163,7 @@ const Home = () => {
             {[...Array(6)].map((_, i) => <div key={i} className="h-32 bg-slate-100 rounded-2xl animate-pulse" />)}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {categories.map((cat) => {
               const style = CATEGORY_STYLE[cat.name?.toLowerCase()] || CATEGORY_STYLE['digər'];
               return (

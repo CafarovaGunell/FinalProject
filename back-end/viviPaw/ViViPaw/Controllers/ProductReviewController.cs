@@ -18,7 +18,7 @@ public class ProductReviewController : ControllerBase
     [HttpGet("by-product/{productId:int}")]
     [AllowAnonymous]
     public async Task<IActionResult> ByProduct(int productId)
-        => Ok(await _service.GetByProductAsync(productId));
+     => Ok(await _service.GetByProductAsync(productId));
 
     [HttpPost]
     [Authorize]
@@ -28,12 +28,36 @@ public class ProductReviewController : ControllerBase
         return r.Success ? Ok(r) : BadRequest(r);
     }
 
+    [HttpPut("{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> Update(
+        int id,
+        [FromBody] ProductReviewCreateDto dto)
+    {
+        var r = await _service.UpdateAsync(
+            User.GetUserId(),
+            id,
+            dto
+        );
+
+        return r.Success ? Ok(r) : BadRequest(r);
+    }
+
     [HttpDelete("{id:int}")]
     [Authorize]
     public async Task<IActionResult> Delete(int id)
     {
         var isAdmin = User.IsInAnyRole(Roles.Admin, Roles.SuperAdmin);
-        var r = await _service.DeleteAsync(User.GetUserId(), isAdmin, id);
+
+        var r = await _service.DeleteAsync(
+            User.GetUserId(),
+            isAdmin,
+            id
+        );
+
         return r.Success ? Ok(r) : BadRequest(r);
     }
 }
+
+
+

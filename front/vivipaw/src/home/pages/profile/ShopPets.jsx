@@ -553,11 +553,29 @@ const ShopPets = ({ showToast }) => {
 
     try {
       const res = await petApi.mine();
+
       const list = Array.isArray(res?.data)
         ? res.data
         : (res?.data?.items || []);
 
-      setPets(list);
+      /*
+        AdoptionStatus:
+        1 = Available
+        2 = Pending
+        3 = Adopted
+        4 = Inactive
+
+        Sahibləndirilmiş (3) heyvanlar mağaza elanlarında görünmür.
+      */
+      const visiblePets = list.filter((pet) => {
+        const adoptionStatus = Number(
+          pet.adoptionStatus ?? pet.status
+        );
+
+        return adoptionStatus !== 3;
+      });
+
+      setPets(visiblePets);
     } catch {
       setPets([]);
     } finally {
@@ -570,13 +588,19 @@ const ShopPets = ({ showToast }) => {
 
     categoryApi
       .all(CATEGORY_TYPE.PET)
-      .then((r) => r?.success && setCategories(r.data || []))
+      .then((res) => {
+        if (res?.success) {
+          setCategories(res.data || []);
+        }
+      })
       .catch(() => {});
 
     shopApi
       .mine()
-      .then((r) => {
-        if (r?.success) setShop(r.data || null);
+      .then((res) => {
+        if (res?.success) {
+          setShop(res.data || null);
+        }
       })
       .catch(() => {});
   }, [fetchList]);
@@ -588,13 +612,16 @@ const ShopPets = ({ showToast }) => {
       const res = await petApi.remove(id);
 
       if (res?.success) {
-        setPets((prev) => prev.filter((item) => item.id !== id));
-        showToast('Elan silindi');
+        setPets((previous) =>
+          previous.filter((item) => item.id !== id)
+        );
+
+        showToast('🗑️ Elan silindi.');
       } else {
-        showToast(res?.message || 'Silinmədi.');
+        showToast(res?.message || 'Elan silinə bilmədi.');
       }
-    } catch (e) {
-      showToast(getError(e, 'Silinmədi.'));
+    } catch (error) {
+      showToast(getError(error, 'Elan silinə bilmədi.'));
     } finally {
       setActing(null);
       setDeleteId(null);
@@ -611,9 +638,16 @@ const ShopPets = ({ showToast }) => {
           onClose={() => setModal(null)}
           showToast={showToast}
           onDone={() => {
-            const edit = !!modal.pet;
+            const isEdit = !!modal.pet;
+
             setModal(null);
-            showToast(edit ? '✅ Elan yeniləndi' : '✅ Elan yaradıldı');
+
+            showToast(
+              isEdit
+                ? '✅ Elan yeniləndi.'
+                : '✅ Elan yaradıldı. Admin təsdiqindən sonra dərc olunacaq.'
+            );
+
             fetchList();
           }}
         />
@@ -621,8 +655,9 @@ const ShopPets = ({ showToast }) => {
 
       <div className="flex justify-end">
         <button
+          type="button"
           onClick={() => setModal({ pet: null })}
-          className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold px-4 py-3 rounded-xl transition shadow-md"
+          className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold px-4 py-3 rounded-xl transition shadow-md shadow-sky-600/20"
         >
           <Plus size={16} />
           Yeni elan
@@ -631,97 +666,128 @@ const ShopPets = ({ showToast }) => {
 
       {loading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => (
+          {[...Array(3)].map((_, index) => (
             <div
-              key={i}
-              className="h-48 bg-white rounded-2xl animate-pulse"
+              key={index}
+              className="h-48 bg-white rounded-2xl animate-pulse border border-slate-100"
             />
           ))}
         </div>
       ) : pets.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-sm text-slate-400 font-semibold">
-          Hələ heyvan elanınız yoxdur.
+        <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-sky-50 text-sky-400 grid place-items-center mb-3">
+            <ImagePlus size={24} />
+          </div>
+
+          <p className="text-sm text-slate-500 font-semibold">
+            Hələ aktiv heyvan elanınız yoxdur.
+          </p>
+
+          <p className="text-xs text-slate-400 mt-1">
+            Yeni elan yaratmaq üçün yuxarıdakı düymədən istifadə edin.
+          </p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {pets.map((p) => (
-            <div
-              key={p.id}
-              className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md transition"
-            >
-              <img
-                src={p.mainImageUrl || PLACEHOLDER_PET}
-                alt={p.name}
-                className="w-full h-36 object-cover bg-slate-100"
-              />
+          {pets.map((pet) => {
+            const image =
+              pet.mainImageUrl ||
+              pet.imageUrl ||
+              pet.imageUrls?.[0] ||
+              PLACEHOLDER_PET;
 
-              <div className="p-4 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-sm font-bold text-slate-900 truncate">
-                    {p.name}
-                  </h4>
+            return (
+              <div
+                key={pet.id}
+                className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md transition"
+              >
+                <img
+                  src={image}
+                  alt={pet.name || ''}
+                  className="w-full h-56 object-cover bg-slate-100"
+                />
 
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                    p.isApproved === false
-                      ? 'bg-amber-50 text-amber-600'
-                      : p.adoptionStatus === 3
-                        ? 'bg-slate-100 text-slate-500'
-                        : 'bg-emerald-50 text-emerald-600'
-                  }`}>
-                    {p.isApproved === false
-                      ? 'Təsdiq gözləyir'
-                      : p.adoptionStatus === 3
-                        ? 'Sahibləndirilib'
+                <div className="p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-sm font-bold text-slate-900 truncate">
+                      {pet.name || 'Adsız heyvan'}
+                    </h4>
+
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                        pet.isApproved === false
+                          ? 'bg-amber-50 text-amber-600'
+                          : 'bg-emerald-50 text-emerald-600'
+                      }`}
+                    >
+                      {pet.isApproved === false
+                        ? 'Təsdiq gözləyir'
                         : 'Aktiv'}
-                  </span>
-                </div>
+                    </span>
+                  </div>
 
-                <p className="text-[11px] text-slate-400 font-semibold truncate">
-                  {p.breed} • {p.ageText || `${p.ageInMonths} ay`}
-                </p>
+                  <p className="text-[11px] text-slate-400 font-semibold truncate">
+                    {pet.breed || 'Cins qeyd edilməyib'} •{' '}
+                    {pet.ageText ||
+                      (pet.ageInMonths !== undefined
+                        ? `${pet.ageInMonths} ay`
+                        : 'Yaş qeyd edilməyib')}
+                  </p>
 
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={() => setModal({ pet: p })}
-                    className="flex-1 py-2 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center justify-center gap-1"
-                  >
-                    <Pencil size={12} />
-                    Redaktə
-                  </button>
+                  <p className="text-[11px] text-slate-400 font-semibold truncate">
+                    {pet.city || 'Şəhər qeyd edilməyib'}
+                  </p>
 
-                  {deleteId === p.id ? (
+                  <div className="flex gap-2 pt-2">
                     <button
-                      onClick={() => remove(p.id)}
-                      disabled={acting === p.id}
-                      className="flex-1 py-2 rounded-lg text-[11px] font-bold bg-rose-600 text-white transition disabled:opacity-50"
+                      type="button"
+                      onClick={() => setModal({ pet })}
+                      className="flex-1 py-2 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center justify-center gap-1"
                     >
-                      {acting === p.id ? '...' : 'Təsdiqlə'}
+                      <Pencil size={12} />
+                      Redaktə
                     </button>
-                  ) : (
+
+                    {deleteId === pet.id ? (
+                      <button
+                        type="button"
+                        onClick={() => remove(pet.id)}
+                        disabled={acting === pet.id}
+                        className="flex-1 py-2 rounded-lg text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white transition disabled:opacity-50"
+                      >
+                        {acting === pet.id ? 'Silinir...' : 'Təsdiqlə'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(pet.id)}
+                        className="px-3 py-2 rounded-lg text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 transition"
+                        title="Elanı sil"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+
+                  {deleteId === pet.id && (
                     <button
-                      onClick={() => setDeleteId(p.id)}
-                      className="px-3 py-2 rounded-lg text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 transition"
+                      type="button"
+                      onClick={() => setDeleteId(null)}
+                      className="w-full text-[10px] font-bold text-slate-400 hover:text-slate-600 transition"
                     >
-                      <Trash2 size={12} />
+                      Geri
                     </button>
                   )}
                 </div>
-
-                {deleteId === p.id && (
-                  <button
-                    onClick={() => setDeleteId(null)}
-                    className="w-full text-[10px] font-bold text-slate-400 hover:text-slate-600"
-                  >
-                    Geri
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
   );
 };
+
+
 
 export default ShopPets;

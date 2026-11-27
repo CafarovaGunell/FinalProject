@@ -147,6 +147,70 @@
   },
   {
     "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "ProductReviews",
+    "RelativePath": "api/Admin/product-reviews",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "DeleteProductReview",
+    "RelativePath": "api/Admin/product-reviews/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "ApproveProductReview",
+    "RelativePath": "api/Admin/product-reviews/{id}/approve",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
+    "Method": "RejectProductReview",
+    "RelativePath": "api/Admin/product-reviews/{id}/reject",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.AdminController",
     "Method": "Shops",
     "RelativePath": "api/Admin/shops",
     "HttpMethod": "GET",
@@ -216,7 +280,7 @@
   },
   {
     "ContainingType": "ViViPaw.Controllers.AdminController",
-    "Method": "DeleteRejectedTestimonial",
+    "Method": "DeleteTestimonial",
     "RelativePath": "api/Admin/testimonials/{id}",
     "HttpMethod": "DELETE",
     "IsController": true,
@@ -1637,6 +1701,27 @@
   },
   {
     "ContainingType": "ViViPaw.Controllers.ProductReviewController",
+    "Method": "Update",
+    "RelativePath": "api/product-reviews/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "dto",
+        "Type": "ViViPaw.DTOs.Product.ProductReviewCreateDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.ProductReviewController",
     "Method": "Delete",
     "RelativePath": "api/product-reviews/{id}",
     "HttpMethod": "DELETE",
@@ -1767,6 +1852,27 @@
       {
         "Name": "id",
         "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ViViPaw.Controllers.TestimonialController",
+    "Method": "Update",
+    "RelativePath": "api/Testimonial/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "dto",
+        "Type": "ViViPaw.DTOs.Testimonial.TestimonialCreateDto",
         "IsRequired": true
       }
     ],

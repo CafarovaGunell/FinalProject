@@ -309,7 +309,7 @@ const ShopArchive = ({ showToast }) => {
                         onClick={() => hideFromArchive(pet)}
                         className="flex-1 py-2 rounded-lg text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white transition"
                       >
-                        Bəli, gizlət
+                        Bəli, sil
                       </button>
 
                       <button
@@ -325,7 +325,7 @@ const ShopArchive = ({ showToast }) => {
                       className="w-full py-2 rounded-lg text-[11px] font-bold bg-slate-50 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 transition flex items-center justify-center gap-1.5"
                     >
                       <LuEyeOff size={13} />
-                      Siyahıdan gizlət
+                      Sil
                     </button>
                   )}
                 </div>

@@ -32,3 +32,18 @@ public enum NotificationType
     AccountApproved = 6,
     System = 7
 }
+
+
+public enum PaymentMethod
+{
+    CashOnDelivery = 1,
+    Card = 2
+}
+
+public enum PaymentStatus
+{
+    Unpaid = 1,
+    Paid = 2,
+    RefundRequested = 3,
+    Refunded = 4
+}

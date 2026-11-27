@@ -39,6 +39,7 @@ import AdminArticles from '../home/pages/admin/AdminArticles';
 import AdminAllPets from '../home/pages/admin/AdminAllPets';
 import AdminAdoptionRequests from '../home/pages/admin/AdminAdoptionRequests';
 import AdminAppointments from '../home/pages/admin/AdminAppointments';
+import ProductReviewsAdmin from '../home/pages/admin/ProductReviewsAdmin';
 
 
 export const router = createBrowserRouter([
@@ -95,6 +96,7 @@ export const router = createBrowserRouter([
       { path: 'articles', element: <AdminArticles /> },
       { path: 'adoption-requests', element: <AdminAdoptionRequests /> },
       { path: 'appointments', element: <AdminAppointments /> },
+      { path: 'product-reviews', element: <ProductReviewsAdmin /> },
     
     ],
   },

@@ -53,12 +53,26 @@ public class OrderService : IOrderService
         {
             OrderNumber = $"VP-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}",
             CustomerUserId = userId,
+
             ShippingFullName = dto.ShippingFullName,
             ShippingPhone = dto.ShippingPhone,
             ShippingCity = dto.ShippingCity,
             ShippingAddress = dto.ShippingAddress,
             Note = dto.Note,
-            Status = OrderStatus.Pending
+
+            Status = OrderStatus.Pending,
+
+            PaymentMethod = dto.PaymentMethod,
+
+            /*
+              Bu kurs/demo layihəsi üçün mock payment-dir.
+
+              Kart seçildikdə sifarişi "Paid" kimi saxlayırıq.
+              Real bank ödənişi və real transaction yoxdur.
+            */
+            PaymentStatus = dto.PaymentMethod == PaymentMethod.Card
+        ? PaymentStatus.Paid
+        : PaymentStatus.Unpaid
         };
 
         decimal subTotal = 0;
@@ -186,6 +200,15 @@ public class OrderService : IOrderService
             order.CancelReason = dto.CancelReason;
         }
 
+
+        if (order.PaymentMethod == PaymentMethod.Card &&
+    order.PaymentStatus == PaymentStatus.Paid)
+        {
+            order.PaymentStatus = PaymentStatus.Refunded;
+            order.RefundedAt = DateTime.UtcNow;
+        }
+
+
         order.Status = dto.Status;
         await _db.SaveChangesAsync();
 
@@ -211,11 +234,32 @@ public class OrderService : IOrderService
             var p = await _db.Products.FirstOrDefaultAsync(x => x.Id == i.ProductId);
             if (p is not null) p.StockQuantity += i.Quantity;
         }
-
         order.Status = OrderStatus.Cancelled;
         order.CancelReason = reason ?? "Müştəri tərəfindən ləğv edildi.";
+
+        /*
+          Kartla demo ödəniş edilibsə,
+          refund da demo olaraq tamamlanmış sayılır.
+
+          Real payment gateway qoşulanda burada Stripe/Epoint/Azericard
+          refund API-si çağırılmalıdır.
+        */
+        if (order.PaymentMethod == PaymentMethod.Card &&
+            order.PaymentStatus == PaymentStatus.Paid)
+        {
+            order.PaymentStatus = PaymentStatus.Refunded;
+            order.RefundedAt = DateTime.UtcNow;
+        }
+
         await _db.SaveChangesAsync();
 
-        return ApiResponse<string>.Ok("ok", "Sifariş ləğv edildi.");
+        return ApiResponse<string>.Ok(
+    "ok",
+    order.PaymentMethod == PaymentMethod.Card
+        ? "Sifariş ləğv edildi. Ödənişiniz 1 həftə ərzində geri qaytarılacaq."
+        : "Sifariş ləğv edildi."
+);
     }
 }
+
+

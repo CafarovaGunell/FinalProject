@@ -551,6 +551,103 @@ const VetSecurity = ({ showToast }) => {
   );
 };
 
+/* ═══════════ LƏĞV MODALI ═══════════ */
+const CancelAppointmentModal = ({ data, onClose, onConfirm, saving }) => {
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState('');
+
+  const submit = (e) => {
+    e.preventDefault();
+
+    if (!reason.trim()) {
+      return setError('Ləğv səbəbini yazın.');
+    }
+
+    if (reason.trim().length < 5) {
+      return setError('Səbəb ən azı 5 simvol olmalıdır.');
+    }
+
+    onConfirm(reason.trim());
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-sm grid place-items-center p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl"
+      >
+        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+          <div className="w-11 h-11 rounded-2xl bg-rose-50 text-rose-600 grid place-items-center">
+            <Ban size={20} />
+          </div>
+          <div>
+            <h3 className="text-lg font-black text-slate-900">
+              Randevunu ləğv et
+            </h3>
+            <p className="text-xs text-slate-500">
+              {data?.customerName} adlı müştərinin randevusu
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={submit} className="space-y-3">
+          {error && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-semibold flex gap-2">
+              <AlertCircle size={15} className="shrink-0 mt-0.5" />
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label className={labelCls}>Ləğv səbəbi *</label>
+            <textarea
+              value={reason}
+              onChange={(e) => {
+                setReason(e.target.value);
+                setError('');
+              }}
+              rows={4}
+              maxLength={300}
+              placeholder="Məsələn: Baytar xəstədir, başqa vaxt təklif edin..."
+              className={inputCls + ' resize-none'}
+            />
+            <p className="text-[10px] text-slate-400 text-right">
+              {reason.length}/300
+            </p>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition"
+            >
+              Geri
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {saving ? (
+                <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+              ) : (
+                <>
+                  <Ban size={14} />
+                  Ləğv et
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 /* ═══════════ GƏLƏN RANDEVULAR ═══════════ */
 const STATUS_FILTERS = [
   { v: '', l: 'Hamısı' },
@@ -568,6 +665,7 @@ const VetAppointments = ({ showToast }) => {
   const [date, setDate] = useState('');
   const [acting, setActing] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [cancelModal, setCancelModal] = useState(null);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -602,11 +700,11 @@ const VetAppointments = ({ showToast }) => {
     fetchList();
   }, [fetchList]);
 
-  const act = async (id, newStatus) => {
+  const act = async (id, newStatus, cancelReason = null) => {
     setActing(id);
 
     try {
-      const res = await appointmentApi.setStatus(id, newStatus);
+      const res = await appointmentApi.setStatus(id, newStatus, cancelReason);
 
       if (!res?.success) {
         showToast(res?.message || 'Status yenilənmədi.');
@@ -619,6 +717,7 @@ const VetAppointments = ({ showToast }) => {
       showToast(getError(err, 'Status yenilənmədi.'));
     } finally {
       setActing(null);
+      setCancelModal(null);
     }
   };
 
@@ -801,7 +900,10 @@ const VetAppointments = ({ showToast }) => {
                   {[1, 2].includes(Number(appointment.status)) && (
                     <button
                       disabled={acting === appointment.id}
-                      onClick={() => act(appointment.id, 4)}
+                      onClick={() => setCancelModal({
+                        id: appointment.id,
+                        customerName: getCustomer(appointment),
+                      })}
                       className={actionButton + ' bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200'}
                     >
                       <Ban size={13} />
@@ -841,6 +943,15 @@ const VetAppointments = ({ showToast }) => {
             );
           })}
         </div>
+      )}
+
+      {cancelModal && (
+        <CancelAppointmentModal
+          data={cancelModal}
+          onClose={() => setCancelModal(null)}
+          onConfirm={(reason) => act(cancelModal.id, 4, reason)}
+          saving={acting === cancelModal.id}
+        />
       )}
     </div>
   );

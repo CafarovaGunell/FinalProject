@@ -52,4 +52,22 @@ public class TestimonialController : ControllerBase
         var r = await _service.DeleteAsync(User.GetUserId(), isAdmin, id);
         return r.Success ? Ok(r) : BadRequest(r);
     }
+
+
+    [HttpPut("{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> Update(
+    int id,
+    [FromBody] TestimonialCreateDto dto)
+    {
+        var result = await _service.UpdateAsync(
+            User.GetUserId(),
+            id,
+            dto
+        );
+
+        return result.Success
+            ? Ok(result)
+            : BadRequest(result);
+    }
 }

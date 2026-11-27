@@ -5,6 +5,7 @@ public class TestimonialGetDto
 {
     public int Id { get; set; }
     public string UserFullName { get; set; } = string.Empty;
+    public int AppUserId { get; set; }
     public string? UserImageUrl { get; set; }
     public string Comment { get; set; } = string.Empty;
     public string? PetImageUrl { get; set; }

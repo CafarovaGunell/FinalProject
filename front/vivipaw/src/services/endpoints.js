@@ -77,9 +77,23 @@ export const productApi = {
   create:    (d) => u(API.post('/Product', d)),
   update:    (id, d) => u(API.put(`/Product/${id}`, d)),
   remove:    (id) => u(API.delete(`/Product/${id}`)),
-  reviews:   (productId) => u(API.get(`/product-reviews/by-product/${productId}`)),
-  addReview: (d) => u(API.post('/product-reviews', d)),
+
+  reviews:   (productId) =>
+    u(API.get(`/product-reviews/by-product/${productId}`)),
+
+  addReview: (d) =>
+    u(API.post('/product-reviews', d)),
+
+  updateReview: (id, d) =>
+    u(API.put(`/product-reviews/${id}`, d)),
+
+  deleteReview: (id) =>
+    u(API.delete(`/product-reviews/${id}`)),
+
+  
 };
+
+
 
 export const cartApi = {
   get:        () => u(API.get('/Cart')),
@@ -136,6 +150,8 @@ export const testimonialApi = {
   create: (d) => u(API.post('/Testimonial', d)),
   like:   (id) => u(API.post(`/Testimonial/${id}/like`)),
   remove: (id) => u(API.delete(`/Testimonial/${id}`)),
+
+ update: (id, data) => u(API.put(`/Testimonial/${id}`, data)),
 };
 
 export const articleApi = {
@@ -199,6 +215,21 @@ testimonials: (status) =>
 
 deleteTestimonial: (id) =>
   u(API.delete(`/Admin/testimonials/${id}`)),
+
+
+
+
+productReviews: (status = 'pending') =>
+    u(API.get('/Admin/product-reviews', { params: { status } })),
+
+  approveProductReview: (id) =>
+    u(API.put(`/Admin/product-reviews/${id}/approve`)),
+
+  rejectProductReview: (id) =>
+    u(API.put(`/Admin/product-reviews/${id}/reject`)),
+
+  deleteProductReview: (id) =>
+    u(API.delete(`/Admin/product-reviews/${id}`)),
 
 };
 

@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   LuCheck,
   LuX,
   LuStar,
   LuTrash2,
+  LuMessageSquare,
+  LuPackage,
 } from 'react-icons/lu';
+
 import { adminApi } from '../../../services/endpoints';
 import { getError } from '../../../services/api';
+
 import {
   PageHeader,
   EmptyBox,
@@ -27,13 +32,18 @@ const AdminTestimonials = () => {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
+
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+
   const [toast, setToast] = useState('');
 
   const showToast = (message) => {
     setToast(message);
-    setTimeout(() => setToast(''), 2500);
+
+    setTimeout(() => {
+      setToast('');
+    }, 2500);
   };
 
   const fetchList = useCallback(async () => {
@@ -42,8 +52,9 @@ const AdminTestimonials = () => {
     try {
       const response = await adminApi.testimonials(tab);
       setList(listFrom(response));
-    } catch {
+    } catch (error) {
       setList([]);
+      showToast(getError(error, 'Rəylər yüklənmədi.'));
     } finally {
       setLoading(false);
     }
@@ -60,7 +71,12 @@ const AdminTestimonials = () => {
       const response = await adminApi.approveTestimonial(id, approve);
 
       if (response?.success) {
-        showToast(approve ? '✅ Rəy dərc olundu' : '🚫 Rəy rədd edildi');
+        showToast(
+          approve
+            ? '✅ Rəy dərc olundu'
+            : '🚫 Rəy rədd edildi'
+        );
+
         fetchList();
       } else {
         showToast(response?.message || 'Əməliyyat alınmadı.');
@@ -124,7 +140,7 @@ const AdminTestimonials = () => {
     <div>
       <PageHeader
         title="Rəy moderasiyası"
-        subtitle={`${list.length} rəy`}
+        subtitle={`${list.length} platforma rəyi`}
       />
 
       {toast && (
@@ -133,6 +149,26 @@ const AdminTestimonials = () => {
         </div>
       )}
 
+      {/* Platforma/Məhsul keçid düymələri */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        <Link
+          to="/admin/testimonials"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-600 text-white text-xs font-bold shadow-md"
+        >
+          <LuMessageSquare size={15} />
+          Platforma rəyləri
+        </Link>
+
+        <Link
+          to="/admin/product-reviews"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition"
+        >
+          <LuPackage size={15} />
+          Məhsul rəyləri
+        </Link>
+      </div>
+
+      {/* Platforma rəy status tabları */}
       <div className="flex gap-2 mb-6">
         {TABS.map((item) => (
           <button
@@ -152,7 +188,10 @@ const AdminTestimonials = () => {
       {loading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 bg-white rounded-2xl animate-pulse border border-slate-200" />
+            <div
+              key={i}
+              className="h-28 bg-white rounded-2xl animate-pulse border border-slate-200"
+            />
           ))}
         </div>
       ) : list.length === 0 ? (
@@ -186,6 +225,7 @@ const AdminTestimonials = () => {
                       <p className="text-sm font-bold text-slate-900">
                         {item.userFullName || 'İstifadəçi'}
                       </p>
+
                       <p className="text-[10px] text-slate-400 font-semibold">
                         {item.dateText || '—'}
                       </p>
@@ -193,7 +233,9 @@ const AdminTestimonials = () => {
                   </div>
 
                   <div className="flex flex-col items-end gap-1">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${badge.cls}`}>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${badge.cls}`}
+                    >
                       {badge.label}
                     </span>
 
@@ -224,14 +266,19 @@ const AdminTestimonials = () => {
                       disabled={busyId === item.id}
                       className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl disabled:opacity-50"
                     >
-                      {busyId === item.id ? <Spinner small /> : <LuCheck size={14} />}
+                      {busyId === item.id ? (
+                        <Spinner small />
+                      ) : (
+                        <LuCheck size={14} />
+                      )}
+
                       Dərc et
                     </button>
 
                     <button
                       onClick={() => decide(item.id, false)}
                       disabled={busyId === item.id}
-                      className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold px-4 py-2.5 rounded-xl"
+                      className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold px-4 py-2.5 rounded-xl disabled:opacity-50"
                     >
                       <LuX size={14} />
                       Rədd et
@@ -239,20 +286,20 @@ const AdminTestimonials = () => {
                   </div>
                 )}
 
-                {tab === 3 && (
-                  <button
-                    onClick={() =>
-                      setDeleteTarget({
-                        id: item.id,
-                        name: item.userFullName || 'İstifadəçi rəyi',
-                      })
-                    }
-                    className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-xs font-bold px-4 py-2.5 rounded-xl"
-                  >
-                    <LuTrash2 size={14} />
-                    Rədd edilmiş rəyi sil
-                  </button>
-                )}
+{(tab === 2 || tab === 3) && (
+  <button
+    onClick={() =>
+      setDeleteTarget({
+        id: item.id,
+        name: item.userFullName || 'İstifadəçi rəyi',
+      })
+    }
+    className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-xs font-bold px-4 py-2.5 rounded-xl"
+  >
+    <LuTrash2 size={14} />
+    Rəyi sil
+  </button>
+)}
               </div>
             </div>
           ))}
@@ -266,7 +313,9 @@ const AdminTestimonials = () => {
       >
         <div className="space-y-4">
           <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs font-semibold text-rose-700">
-            <b>{deleteTarget?.name}</b> tərəfindən yazılmış rəyi silmək istəyirsiniz?
+            <b>{deleteTarget?.name}</b> tərəfindən yazılmış rəyi silmək
+            istəyirsiniz?
+
             <p className="mt-1 text-rose-600">
               Bu əməliyyat geri qaytarıla bilməz.
             </p>
@@ -284,7 +333,7 @@ const AdminTestimonials = () => {
             <button
               onClick={deleteTestimonial}
               disabled={deleteBusy}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-600 text-white"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-600 text-white disabled:opacity-50"
             >
               {deleteBusy ? <Spinner small /> : <LuTrash2 size={14} />}
               Bəli, sil

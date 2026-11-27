@@ -31,6 +31,7 @@ public class AdminController : ControllerBase
     private readonly AppDbContext _db;
     private readonly UserManager<AppUser> _userManager;
     private readonly IVetManagementService _vetManagementService;
+    private readonly IProductReviewService _productReview;
 
     public AdminController(
         IPetShopService shop,
@@ -41,7 +42,8 @@ public class AdminController : ControllerBase
         IUserProfileService user,
         AppDbContext db,
         UserManager<AppUser> userManager,
-        IVetManagementService vetManagementService)
+        IVetManagementService vetManagementService,
+        IProductReviewService productReview)
     {
         _shop = shop;
         _vet = vet;
@@ -52,6 +54,7 @@ public class AdminController : ControllerBase
         _db = db;
         _userManager = userManager;
         _vetManagementService = vetManagementService;
+        _productReview = productReview;
     }
 
     //DASHBOARD
@@ -922,18 +925,19 @@ public class AdminController : ControllerBase
     }
 
 
-
-
     [HttpDelete("testimonials/{id:int}")]
-    public async Task<IActionResult> DeleteRejectedTestimonial(int id)
+    public async Task<IActionResult> DeleteTestimonial(int id)
     {
-        var result = await _testimonial.AdminDeleteRejectedAsync(id);
+        var result = await _testimonial.DeleteAsync(
+            User.GetUserId(),
+            true,
+            id
+        );
 
         return result.Success
             ? Ok(result)
             : BadRequest(result);
     }
-
 
 
 
@@ -1278,6 +1282,55 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> DeleteRejectedVet(int id)
     {
         var result = await _vetManagementService.DeleteRejectedVetAsync(id);
+
+        return result.Success
+            ? Ok(result)
+            : BadRequest(result);
+    }
+
+
+
+    // PRODUCT REVIEWS
+
+    [HttpGet("product-reviews")]
+    public async Task<IActionResult> ProductReviews(
+      [FromQuery] ApprovalStatus status = ApprovalStatus.Pending)
+    {
+        var result = await _productReview.GetAdminAsync(status);
+
+        return result.Success
+            ? Ok(result)
+            : BadRequest(result);
+    }
+
+    [HttpPut("product-reviews/{id:int}/approve")]
+    public async Task<IActionResult> ApproveProductReview(int id)
+    {
+        var result = await _productReview.ApproveAsync(id);
+
+        return result.Success
+            ? Ok(result)
+            : BadRequest(result);
+    }
+
+    [HttpPut("product-reviews/{id:int}/reject")]
+    public async Task<IActionResult> RejectProductReview(int id)
+    {
+        var result = await _productReview.RejectAsync(id);
+
+        return result.Success
+            ? Ok(result)
+            : BadRequest(result);
+    }
+
+    [HttpDelete("product-reviews/{id:int}")]
+    public async Task<IActionResult> DeleteProductReview(int id)
+    {
+        var result = await _productReview.DeleteAsync(
+            User.GetUserId(),
+            true,
+            id
+        );
 
         return result.Success
             ? Ok(result)

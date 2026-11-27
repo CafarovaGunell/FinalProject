@@ -110,37 +110,58 @@ const AdminAllPets = () => {
   };
 
   const fetchList = useCallback(async () => {
-    setLoading(true);
+  setLoading(true);
 
-    const [publicRes, pendingRes, adoptedRes] = await Promise.all([
+  try {
+    /*
+      adoptedPets endpoint-i çağırılmır.
+      Sadəcə public və pending elanlar götürülür.
+    */
+    const [publicRes, pendingRes] = await Promise.all([
       petApi.list({ page: 1, pageSize: 500 }).catch(() => null),
       adminApi.pendingPets(1, 500).catch(() => null),
-      adminApi.adoptedPets?.().catch(() => null),
     ]);
 
     const all = [
       ...listFrom(publicRes).map((x) => norm(x, 'public')),
       ...listFrom(pendingRes).map((x) => norm(x, 'pending')),
-      ...listFrom(adoptedRes).map((x) => norm(x, 'adopted')),
     ];
 
     const map = new Map();
 
-    all.forEach((p) => {
-      const id = p.id ?? p.petId;
+    all.forEach((pet) => {
+      const id = pet.id ?? pet.petId;
       if (!id) return;
+
+      const adoptionStatus = Number(
+        pet.adoptionStatus ?? pet.status
+      );
+
+      /*
+        3 = Sahiblənilib.
+        Sahiblənilmiş heyvanlar tam siyahıya əlavə edilmir.
+      */
+      if (adoptionStatus === 3) return;
 
       const old = map.get(id);
 
-      // adopted məlumatları daha zəngindirsə onu saxla
-      if (!old || p._source === 'adopted') {
-        map.set(id, p);
+      /*
+        Pending məlumatları varsa public məlumatın üstünə yazır,
+        çünki pending-də admin üçün daha aktual məlumat ola bilər.
+      */
+      if (!old || pet._source === 'pending') {
+        map.set(id, pet);
       }
     });
 
     setList([...map.values()]);
+  } catch (error) {
+    console.error('Heyvanlar yüklənmədi:', error);
+    setList([]);
+  } finally {
     setLoading(false);
-  }, []);
+  }
+}, []);
 
   useEffect(() => {
     fetchList();
@@ -316,7 +337,7 @@ const AdminAllPets = () => {
                   const img = p.mainImageUrl || p.imageUrl || p.imageUrls?.[0] || PLACEHOLDER_PET;
                   const owner = p.petShopName || p.ownerFullName || p.previousOwnerFullName || p.ownerName;
 
-                  const adopted = Number(st) === 3;
+                
 
                   return (
                     <tr
@@ -391,17 +412,13 @@ const AdminAllPets = () => {
                             <LuEye size={15} />
                           </button>
 
-                          {!adopted ? (
-                            <button
-                              onClick={() => setConfirmDel(p)}
-                              title="Sil"
-                              className="p-2 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
-                            >
-                              <LuTrash2 size={15} />
-                            </button>
-                          ) : (
-                            <span className="text-[10px] font-semibold text-slate-300 px-2">—</span>
-                          )}
+<button
+  onClick={() => setConfirmDel(p)}
+  title="Sil"
+  className="p-2 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+>
+  <LuTrash2 size={15} />
+</button>
                         </div>
                       </td>
                     </tr>
@@ -529,17 +546,15 @@ const AdminAllPets = () => {
                 </div>
               </div>
 
-              {Number(detail.adoptionStatus) !== 3 && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setConfirmDel(detail)}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
-                  >
-                    <LuTrash2 size={14} />
-                    Elanı sil
-                  </button>
-                </div>
-              )}
+ <div className="flex justify-end">
+  <button
+    onClick={() => setConfirmDel(detail)}
+    className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
+  >
+    <LuTrash2 size={14} />
+    Elanı sil
+  </button>
+</div>
             </div>
           </div>
         ) : null}

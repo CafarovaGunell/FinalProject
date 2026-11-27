@@ -282,7 +282,7 @@ const ShopProducts = ({ showToast }) => {
           {products.map((p) => (
             <div key={p.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md transition">
               <div className="relative">
-                <img src={p.mainImageUrl || PLACEHOLDER_PRODUCT} alt={p.name} className="w-full h-36 object-cover bg-slate-100" />
+                <img src={p.mainImageUrl || PLACEHOLDER_PRODUCT} alt={p.name} className="w-full h-50 object-cover bg-slate-100" />
                 <span className={`absolute top-2 left-2 text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-sm ${
                   p.isActive
                     ? 'bg-emerald-500 text-white'

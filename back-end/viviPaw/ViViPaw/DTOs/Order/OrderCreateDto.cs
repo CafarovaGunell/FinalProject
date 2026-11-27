@@ -1,5 +1,6 @@
 ﻿
 using System.ComponentModel.DataAnnotations;
+using ViViPaw.Models.Enums;
 
 namespace ViViPaw.DTOs.Order;
 
@@ -19,4 +20,6 @@ public class OrderCreateDto
 
     [MaxLength(500)]
     public string? Note { get; set; }
+
+    public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.CashOnDelivery;
 }

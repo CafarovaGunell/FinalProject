@@ -24,7 +24,15 @@ public class Order : BaseEntity
     public decimal TotalAmount { get; set; }
 
     public OrderStatus Status { get; set; } = OrderStatus.Pending;
+
     public string? CancelReason { get; set; }
+    public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.CashOnDelivery;
+
+    public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
+
+    public DateTime? RefundedAt { get; set; }
 
     public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
 }
+
+

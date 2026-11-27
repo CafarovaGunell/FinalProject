@@ -1088,6 +1088,15 @@ namespace ViViPaw.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int>("PaymentMethod")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("ShippingAddress")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1379,6 +1388,9 @@ namespace ViViPaw.Migrations
                     b.Property<int>("AppUserId")
                         .HasColumnType("int");
 
+                    b.Property<int>("ApprovalStatus")
+                        .HasColumnType("int");
+
                     b.Property<string>("Comment")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1405,8 +1417,7 @@ namespace ViViPaw.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("AppUserId", "ProductId")
-                        .IsUnique();
+                    b.HasIndex("AppUserId", "ProductId");
 
                     b.ToTable("ProductReviews");
                 });

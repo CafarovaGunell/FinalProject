@@ -218,7 +218,7 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
                 .HasForeignKey(x => x.AppUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            e.HasIndex(x => new { x.AppUserId, x.ProductId }).IsUnique();
+            e.HasIndex(x => new { x.AppUserId, x.ProductId });
         });
 
         b.Entity<CartItem>(e =>

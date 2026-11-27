@@ -20,6 +20,12 @@ public class OrderGetDto
     public DateTime CreatedAt { get; set; }
     public string DateText { get; set; } = string.Empty;
     public List<OrderItemDto> Items { get; set; } = new();
+
+    public PaymentMethod PaymentMethod { get; set; }
+
+    public PaymentStatus PaymentStatus { get; set; }
+
+    public DateTime? RefundedAt { get; set; }
 }
 
 public class OrderItemDto
